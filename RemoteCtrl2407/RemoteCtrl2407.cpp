@@ -287,8 +287,8 @@ int SendScreen() {
 		CServerSocket::getInstance()->Send(pack);
 		GlobalUnlock(hMem);
 	}
-	screen.Save(pStream, Gdiplus::ImageFormatPNG);
-	// screen.Save(_T("test123.jpeg"), Gdiplus::ImageFormatJPEG);
+	//screen.Save(pStream, Gdiplus::ImageFormatPNG);
+    screen.Save(_T("test123.jpeg"), Gdiplus::ImageFormatJPEG);
 	// LOGI("> save done! <");
 	pStream->Release();
 	GlobalFree(hMem);
@@ -296,7 +296,13 @@ int SendScreen() {
 	return 0;
 }
 
+int LockMachine() {
+	return 0;
+}
 
+int UnLockMachine() {
+	return 0;
+}
 
 
 int main()
@@ -322,6 +328,12 @@ int main()
 		break;
 	case 6:
 		SendScreen(); // 发送屏幕内容 -> 发送屏幕截图
+		break;
+	case 7:
+		LockMachine();
+		break;
+	case 8:
+		UnLockMachine();
 		break;
 	default:
 		break;
