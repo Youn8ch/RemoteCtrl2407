@@ -296,11 +296,62 @@ int SendScreen() {
 	return 0;
 }
 
+#include "LockInfoDialog.h"
+CLockInfoDialog dlg;
+unsigned threadid = 0;
+
+
+unsigned __stdcall threadLockDlg(void* arg) {
+
+	LOGI("> Created id = %d <", GetCurrentThreadId());
+
+	dlg.Create(IDD_DIALOG_INFO, NULL);
+	dlg.ShowWindow(SW_SHOW);
+	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+	ShowCursor(false); // 限制鼠标功能
+	CRect rect;
+	dlg.GetWindowRect(rect);
+	ClipCursor(rect); // 限制鼠标功能
+	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);
+	MSG msg;
+	// GetMessage 只能拿到跟这个线程相关的消息
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		if (msg.message == WM_KEYDOWN)
+		{
+			TRACE("msg:%08X wparam:%08x lparam:%08X\r\n", msg.message, msg.wParam, msg.lParam);
+			if (msg.wParam == 0x1b)
+			{
+				break;
+			}
+		}
+	}
+	ShowCursor(true);
+	::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);
+	dlg.DestroyWindow();
+	_endthreadex(0);
+	return 0;
+}
+
 int LockMachine() {
+	if (dlg.m_hWnd==NULL || dlg.m_hWnd==INVALID_HANDLE_VALUE)
+	{
+		// _beginthread(threadLockDlg, 0, NULL);
+		_beginthreadex(NULL,0,threadLockDlg, NULL, 0, &threadid);
+		LOGI("> threadid = %d <", threadid);
+	}
+	CPacket pack(7, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
 	return 0;
 }
 
 int UnLockMachine() {
+	
+	PostThreadMessage(threadid, WM_KEYDOWN, 0x0000001b, 0);
+
+	// ::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x0000001b, 0x00010001);
 	return 0;
 }
 
@@ -308,63 +359,72 @@ int UnLockMachine() {
 int main()
 {
 
-	int nCmd = 6;
-	switch (nCmd)
-	{
-	case 1:
-		MakeDriverInfo(); // 查看磁盘分区
-		break;
-	case 2:
-		MakeDirectoryInfo(); // 查看指定目录下的文件
-		break;
-	case 3:
-		RunFile(); // 打开文件
-		break;
-	case 4:
-		DownloadFile();
-		break;
-	case 5:
-		MouseEvent(); // 鼠标操作
-		break;
-	case 6:
-		SendScreen(); // 发送屏幕内容 -> 发送屏幕截图
-		break;
-	case 7:
-		LockMachine();
-		break;
-	case 8:
-		UnLockMachine();
-		break;
-	default:
-		break;
-	}
 
+    int nRetCode = 0;
 
+    HMODULE hModule = ::GetModuleHandle(nullptr);
 
-    //int nRetCode = 0;
+    if (hModule != nullptr)
+    {
+        // 初始化 MFC 并在失败时显示错误
+        if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
+        {
+            // TODO: 在此处为应用程序的行为编写代码。
+            wprintf(L"错误: MFC 初始化失败\n");
+            nRetCode = 1;
+        }
+        else
+        {
+			int nCmd = 7;
+			switch (nCmd)
+			{
+			case 1:
+				MakeDriverInfo(); // 查看磁盘分区
+				break;
+			case 2:
+				MakeDirectoryInfo(); // 查看指定目录下的文件
+				break;
+			case 3:
+				RunFile(); // 打开文件
+				break;
+			case 4:
+				DownloadFile();
+				break;
+			case 5:
+				MouseEvent(); // 鼠标操作
+				break;
+			case 6:
+				SendScreen(); // 发送屏幕内容 -> 发送屏幕截图
+				break;
+			case 7:
+				LockMachine();
+			    Sleep(50);
+				// LockMachine();
+				break;
+			case 8:
+				UnLockMachine();
+				break;
+			default:
+				break;
+			}
+			Sleep(3000);
+			UnLockMachine();
+			while (dlg.m_hWnd!=NULL)
+			{
+				Sleep(10);
+			}
+			/*while (dlg.m_hWnd!=NULL && dlg.m_hWnd!=INVALID_HANDLE_VALUE)
+			{
+				Sleep(100);
+			}*/
+        }
+    }
+    else
+    {
+        // TODO: 更改错误代码以符合需要
+        wprintf(L"错误: GetModuleHandle 失败\n");
+        nRetCode = 1;
+    }
 
-    //HMODULE hModule = ::GetModuleHandle(nullptr);
-
-    //if (hModule != nullptr)
-    //{
-    //    // 初始化 MFC 并在失败时显示错误
-    //    if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
-    //    {
-    //        // TODO: 在此处为应用程序的行为编写代码。
-    //        wprintf(L"错误: MFC 初始化失败\n");
-    //        nRetCode = 1;
-    //    }
-    //    else
-    //    {
-    //        // TODO: 在此处为应用程序的行为编写代码。
-    //    }
-    //}
-    //else
-    //{
-    //    // TODO: 更改错误代码以符合需要
-    //    wprintf(L"错误: GetModuleHandle 失败\n");
-    //    nRetCode = 1;
-    //}
-
-    //return nRetCode;
+    return nRetCode;
 }

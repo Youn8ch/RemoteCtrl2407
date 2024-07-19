@@ -36,6 +36,9 @@
     <ClInclude Include="Log.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="LockInfoDialog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RemoteCtrl2407.cpp">
@@ -45,6 +48,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ServerSocket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockInfoDialog.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
