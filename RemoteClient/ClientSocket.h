@@ -132,19 +132,7 @@ typedef struct MouseEvent {
 }MOUSEEVENT, * PMOUSEEVENT;
 
 
-std::string NEWGetErrorInfo(int wsaErrcode) {
-	std::string ret;
-	LPVOID lpMsgBuf = NULL;
-	FormatMessage(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL,
-		wsaErrcode,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf, 0, NULL);
-	ret = (char*)lpMsgBuf;
-	LocalFree(lpMsgBuf);
-	return ret;
-}
+std::string NEWGetErrorInfo(int wsaErrcode);
 
 class CClientSocket
 {
@@ -167,7 +155,7 @@ public:
 		serv_adr.sin_family = AF_INET;
 		serv_adr.sin_addr.s_addr = inet_addr(ipaddress.c_str());
 		serv_adr.sin_port = htons(8554);
-		if (serv_adr.sin_addr.s_addr = INADDR_NONE)
+		if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 		{
 			LOGE("connect addr error");
 			return false;
@@ -231,6 +219,10 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	CPacket& GetPacket() {
+		return m_packet;
 	}
 
 private:

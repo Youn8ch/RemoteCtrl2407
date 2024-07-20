@@ -173,6 +173,7 @@ public:
 		{
 			return false;
 		}
+		LOGI("ACCPET fd = %d", m_client);
 		return true;
 	}
 
@@ -185,18 +186,18 @@ public:
 		size_t index = 0;
 		while (true)
 		{
+			// LOGI("WAIT RECV");
 			size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0)
 			{
 				return -1;
 			}
+			index += len;
 			m_packet = CPacket((const BYTE*)buffer, index);
-			if (index > 0)
-			{
-				memmove(buffer, buffer + index, BUFFER_SIZE - index);
-				index = 0;
-				return m_packet.sCmd;
-			}
+			memmove(buffer, buffer + index, BUFFER_SIZE - index);
+			index = 0;
+			return m_packet.sCmd;
+
 		}
 	}
 
@@ -224,6 +225,15 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	CPacket& GetPacket() {
+		return m_packet;
+	}
+
+	void CloseClient() {
+		closesocket(m_client);
+		m_client = INVALID_SOCKET;
 	}
 
 private:

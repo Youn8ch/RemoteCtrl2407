@@ -356,6 +356,55 @@ int UnLockMachine() {
 }
 
 
+int TestConnect() {
+	LOGI("test conn 666");
+	CPacket pack(666, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
+
+int ExcuteCommand(int nCmd) {
+	int ret;
+	switch (nCmd)
+	{
+	case 1:
+		ret = MakeDriverInfo(); // 查看磁盘分区
+		break;
+	case 2:
+		ret = MakeDirectoryInfo(); // 查看指定目录下的文件
+		break;
+	case 3:
+		ret = RunFile(); // 打开文件
+		break;
+	case 4:
+		ret = DownloadFile();
+		break;
+	case 5:
+		ret = MouseEvent(); // 鼠标操作
+		break;
+	case 6:
+		ret = SendScreen(); // 发送屏幕内容 -> 发送屏幕截图
+		break;
+	case 7:
+		ret = LockMachine();
+		Sleep(50);
+		// LockMachine();
+		break;
+	case 8:
+		ret = UnLockMachine();
+		break;
+	case 666:
+		ret = TestConnect();
+		break;
+	default:
+		ret = -1;
+		break;
+	}
+	return ret;
+}
+
+
 int main()
 {
 
@@ -375,48 +424,35 @@ int main()
         }
         else
         {
-			int nCmd = 7;
-			switch (nCmd)
+			CServerSocket* pserver = CServerSocket::getInstance();
+			int count = 0;
+			if (pserver->Initsocket()==false)
 			{
-			case 1:
-				MakeDriverInfo(); // 查看磁盘分区
-				break;
-			case 2:
-				MakeDirectoryInfo(); // 查看指定目录下的文件
-				break;
-			case 3:
-				RunFile(); // 打开文件
-				break;
-			case 4:
-				DownloadFile();
-				break;
-			case 5:
-				MouseEvent(); // 鼠标操作
-				break;
-			case 6:
-				SendScreen(); // 发送屏幕内容 -> 发送屏幕截图
-				break;
-			case 7:
-				LockMachine();
-			    Sleep(50);
-				// LockMachine();
-				break;
-			case 8:
-				UnLockMachine();
-				break;
-			default:
-				break;
+				LOGE(">server socket init failed<"); exit(0);
 			}
-			Sleep(3000);
-			UnLockMachine();
-			while (dlg.m_hWnd!=NULL)
+			LOGI(">server socket init done!<");
+			while (CServerSocket::getInstance()!=NULL)
 			{
-				Sleep(10);
+				if (pserver->AcceptClient() == false) {
+					if (count >= 3)
+					{
+						LOGE(">failed conn 3<"); exit(0);
+					}
+					LOGE(">failed conn Retry<");
+					count++;
+				}
+				int ret = pserver->DealCommand();
+				LOGI("Dealcommand ret = %d", ret);
+				if (ret > 0)
+				{
+					ret = ExcuteCommand(pserver->GetPacket().sCmd);
+					if (ret!=0)
+					{
+						LOGE(">Cmd Excute failed, ret = %d, cmd = %d",ret, pserver->GetPacket().sCmd);
+					}
+					pserver->CloseClient();
+				}
 			}
-			/*while (dlg.m_hWnd!=NULL && dlg.m_hWnd!=INVALID_HANDLE_VALUE)
-			{
-				Sleep(100);
-			}*/
         }
     }
     else
