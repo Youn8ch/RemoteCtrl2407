@@ -144,7 +144,7 @@ public:
 		}
 		return m_instance;
 	}
-	bool Initsocket(const std::string& ipaddress) {
+	bool Initsocket(int nIp,int nPort) {
 		m_sock = socket(PF_INET, SOCK_STREAM, 0); // TODO : ะฃั้
 		if (m_sock == -1)
 		{
@@ -153,8 +153,8 @@ public:
 		sockaddr_in serv_adr;
 		memset(&serv_adr, 0, sizeof(serv_adr));
 		serv_adr.sin_family = AF_INET;
-		serv_adr.sin_addr.s_addr = inet_addr(ipaddress.c_str());
-		serv_adr.sin_port = htons(8554);
+		serv_adr.sin_addr.s_addr = htonl(nIp);
+		serv_adr.sin_port = htons(nPort);
 		if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 		{
 			LOGE("connect addr error");

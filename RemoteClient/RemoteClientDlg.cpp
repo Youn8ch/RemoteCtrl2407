@@ -53,6 +53,9 @@ END_MESSAGE_MAP()
 
 CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_REMOTECLIENT_DIALOG, pParent)
+	, m_server_address(0)
+	, m_nPort(_T(""))
+	, m_Port(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -60,6 +63,9 @@ CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_server_address);
+	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
+	DDX_Text(pDX, IDC_EDIT_PORT2, m_Port);
 }
 
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
@@ -102,6 +108,12 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
+	UpdateData();
+	m_server_address = 0x7F000001;
+	m_Port = _T("8554");
+	UpdateData(FALSE);
+
+
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -159,8 +171,10 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
+
+	UpdateData();
 	CClientSocket* pClient = CClientSocket::getInstance();
-	bool ret = pClient->Initsocket("127.0.0.1"); // TODO 返回值
+	bool ret = pClient->Initsocket(m_server_address, atoi((CT2CA)m_Port)); // TODO 返回值
 	if (!ret)
 	{
 		TRACE(">NET init failed<");
