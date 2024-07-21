@@ -164,12 +164,13 @@ void CRemoteClientDlg::OnBnClickedBtnTest()
 	if (!ret)
 	{
 		TRACE(">NET init failed<");
+		AfxMessageBox((LPCTSTR)"网络初始化失败");
 	}
 	CPacket pack(666,NULL,0);
 	ret = pClient->Send(pack);
-	TRACE("send ? = %d", ret);
+	TRACE("send ? = %d\r\n", ret);
 	pClient->DealCommand();
-	TRACE("ACK cmd = %d", pClient->GetPacket().sCmd);
+	TRACE("ACK cmd = %d\r\n", pClient->GetPacket().sCmd);
 
 
 }

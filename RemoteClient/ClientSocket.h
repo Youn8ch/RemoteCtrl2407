@@ -171,27 +171,24 @@ public:
 #define BUFFER_SIZE 4096
 
 	int DealCommand() {
-		if (m_sock == -1)
-		{
-			return -1;
-		}
-		char* buffer = new char[BUFFER_SIZE];
+		if (m_sock == -1) return -1;
+		char* buffer = m_buffer.data();
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;
 		while (true)
 		{
+			// LOGI("WAIT RECV");
 			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0)
 			{
 				return -1;
 			}
+			index += len;
 			m_packet = CPacket((const BYTE*)buffer, index);
-			if (index > 0)
-			{
-				memmove(buffer, buffer + index, BUFFER_SIZE - index);
-				index = 0;
-				return m_packet.sCmd;
-			}
+			memmove(buffer, buffer + index, BUFFER_SIZE - index);
+			index = 0;
+			return m_packet.sCmd;
+
 		}
 	}
 
@@ -226,6 +223,7 @@ public:
 	}
 
 private:
+	std::vector<char> m_buffer;
 	SOCKET m_sock;
 	CPacket m_packet;
 private:
@@ -236,6 +234,7 @@ private:
 		if (InitSockEnv() == FALSE) {
 			LOGE("初始化网络环境失败");
 		}
+		m_buffer.resize(BUFFER_SIZE);
 	}
 	~CClientSocket() {
 		closesocket(m_sock);

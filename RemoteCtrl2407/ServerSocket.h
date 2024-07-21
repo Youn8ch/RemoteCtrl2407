@@ -182,6 +182,11 @@ public:
 	int DealCommand() {
 		if (m_client == -1) return -1;
 		char* buffer = new char[BUFFER_SIZE];
+		if (buffer == NULL)
+		{
+			LOGE("> Not enough mem ");
+			return -2;
+		}
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;
 		while (true)
@@ -190,12 +195,14 @@ public:
 			size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0)
 			{
+				delete[] buffer;
 				return -1;
 			}
 			index += len;
 			m_packet = CPacket((const BYTE*)buffer, index);
 			memmove(buffer, buffer + index, BUFFER_SIZE - index);
 			index = 0;
+			delete[] buffer;
 			return m_packet.sCmd;
 
 		}
