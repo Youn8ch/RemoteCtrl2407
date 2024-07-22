@@ -222,6 +222,12 @@ public:
 		return m_packet;
 	}
 
+	void CloseClient() {
+		closesocket(m_sock);
+		m_sock = INVALID_SOCKET;
+	}
+
+
 private:
 	std::vector<char> m_buffer;
 	SOCKET m_sock;

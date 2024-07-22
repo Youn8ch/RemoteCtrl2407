@@ -36,4 +36,11 @@ public:
 	DWORD m_server_address;
 	CString m_nPort;
 	CString m_Port;
+	afx_msg void OnBnClickedButtonFile();
+
+private:
+	int SendCommandPacket(int nCmd,BYTE* pData = NULL,size_t nLength=0);
+
+public:
+	CTreeCtrl m_Tree;
 };

@@ -64,8 +64,8 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_server_address);
-	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
 	DDX_Text(pDX, IDC_EDIT_PORT2, m_Port);
+	DDX_Control(pDX, IDC_TREE_DIR, m_Tree);
 }
 
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
@@ -73,6 +73,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
+	ON_BN_CLICKED(IDC_BUTTON_FILE, &CRemoteClientDlg::OnBnClickedButtonFile)
 END_MESSAGE_MAP()
 
 
@@ -172,19 +173,55 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
 
+	SendCommandPacket(666);
+
+}
+
+
+void CRemoteClientDlg::OnBnClickedButtonFile()
+{
+	int ret = SendCommandPacket(1);
+	if (ret < 0)
+	{
+		AfxMessageBox(_T("ButtonFile命令处理失败"));
+		return;
+	}
+	CClientSocket* pClient = CClientSocket::getInstance();
+	std::string drivers = pClient->GetPacket().strData;
+	std::string dr;
+	m_Tree.DeleteAllItems();
+	for (size_t i = 0; i < drivers.size(); i++)
+	{
+		if (drivers[i] == ',') {
+			dr += ":";
+			m_Tree.InsertItem(dr.c_str(),TVI_ROOT,TVI_LAST);
+			dr.clear();
+			continue;
+		}
+		dr += drivers[i];
+	}
+	dr += ":";
+	m_Tree.InsertItem(CA2T(dr.c_str()), TVI_ROOT, TVI_LAST);
+
+}
+
+int CRemoteClientDlg::SendCommandPacket(int nCmd, BYTE* pData, size_t nLength)
+{
+
 	UpdateData();
 	CClientSocket* pClient = CClientSocket::getInstance();
-	bool ret = pClient->Initsocket(m_server_address, atoi((CT2CA)m_Port)); // TODO 返回值
+	bool ret = pClient->Initsocket(m_server_address, atoi((LPCTSTR)m_Port)); // TODO 返回值
 	if (!ret)
 	{
 		TRACE(">NET init failed<");
 		AfxMessageBox((LPCTSTR)"网络初始化失败");
+		return -1;
 	}
-	CPacket pack(666,NULL,0);
+	CPacket pack(nCmd, pData, nLength);
 	ret = pClient->Send(pack);
 	TRACE("send ? = %d\r\n", ret);
-	pClient->DealCommand();
-	TRACE("ACK cmd = %d\r\n", pClient->GetPacket().sCmd);
-
-
+	int cmd = pClient->DealCommand();
+	TRACE("ACK cmd = %d\r\n", cmd);
+	pClient->CloseClient();
+	return cmd;
 }
