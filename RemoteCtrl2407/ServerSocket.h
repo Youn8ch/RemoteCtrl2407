@@ -207,7 +207,7 @@ public:
 
 	int DealCommand() {
 		if (m_client == -1) return -1;
-		char* buffer = new char[BUFFER_SIZE];
+		char* buffer = m_buffer.data();
 		if (buffer == NULL)
 		{
 			LOGE("> Not enough mem ");
@@ -218,7 +218,7 @@ public:
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = recv(m_client, buffer + index, BUFFER_SIZE - (int)index, 0);
+			size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0)
 			{
 				delete[] buffer;
@@ -226,11 +226,13 @@ public:
 			}
 			index += len;
 			m_packet = CPacket((const BYTE*)buffer, index);
-			memmove(buffer, buffer + index, BUFFER_SIZE - index);
-			index = 0;
-			delete[] buffer;
-			return m_packet.sCmd;
 
+			// 如果数据包处理后剩余数据，可以适当移动缓冲区内容
+			if (index < BUFFER_SIZE) {
+				memmove(buffer, buffer + index, BUFFER_SIZE - index);
+			}
+			index = 0;
+			return m_packet.sCmd;
 		}
 	}
 
@@ -271,6 +273,7 @@ public:
 	}
 
 private:
+	std::vector<char> m_buffer;
 	SOCKET m_sock;
 	SOCKET m_client;
 	CPacket m_packet;
@@ -283,6 +286,7 @@ private:
 		if (InitSockEnv() == FALSE) {
 			LOGE("初始化网络环境失败");
 		}
+		m_buffer.resize(BUFFER_SIZE);
 	}
 	~CServerSocket() {
 		closesocket(m_sock);

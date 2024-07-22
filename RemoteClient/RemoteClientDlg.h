@@ -39,7 +39,7 @@ public:
 	afx_msg void OnBnClickedButtonFile();
 
 private:
-
+	void LoadFileInfo();
 	CString GetTreePath(HTREEITEM hTree);
 	void DeleteTreeChildItem(HTREEITEM hTree);
 	// 1 查看磁盘分区
@@ -52,4 +52,5 @@ private:
 public:
 	CTreeCtrl m_Tree;
 	afx_msg void OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
 };

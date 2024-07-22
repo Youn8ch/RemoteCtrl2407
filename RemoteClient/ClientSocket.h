@@ -203,24 +203,34 @@ public:
 	int DealCommand() {
 		if (m_sock == -1) return -1;
 		char* buffer = m_buffer.data();
+		if (buffer == NULL)
+		{
+			LOGE("> Not enough mem ");
+			return -2;
+		}
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - (int)index, 0);
+			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0)
 			{
+				delete[] buffer;
 				return -1;
 			}
 			index += len;
 			m_packet = CPacket((const BYTE*)buffer, index);
-			memmove(buffer, buffer + index, BUFFER_SIZE - index);
+
+			// 如果数据包处理后剩余数据，可以适当移动缓冲区内容
+			if (index < BUFFER_SIZE) {
+				memmove(buffer, buffer + index, BUFFER_SIZE - index);
+			}
 			index = 0;
 			return m_packet.sCmd;
-
 		}
 	}
+
 
 	bool Send(const char* pdata, int size) {
 		if (m_sock == -1) return false;
