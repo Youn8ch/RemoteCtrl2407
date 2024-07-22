@@ -132,6 +132,36 @@ typedef struct MouseEvent {
 }MOUSEEVENT, * PMOUSEEVENT;
 
 
+
+typedef struct file_info {
+	file_info() {
+		IsInvalid = 0;
+		IsDirectory = -1;
+		HasNext = 0;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+	BOOL IsInvalid; // 是否有效
+	BOOL IsDirectory; // 是否是目录 0否 1是
+	BOOL HasNext; // 是否还有后续 0否 1是
+	char szFileName[256]; // 文件名
+}FILEINFO, * PFILEINFO;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 std::string NEWGetErrorInfo(int wsaErrcode);
 
 class CClientSocket
@@ -178,7 +208,7 @@ public:
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
+			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - (int)index, 0);
 			if (len <= 0)
 			{
 				return -1;

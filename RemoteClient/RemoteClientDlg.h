@@ -39,8 +39,17 @@ public:
 	afx_msg void OnBnClickedButtonFile();
 
 private:
-	int SendCommandPacket(int nCmd,BYTE* pData = NULL,size_t nLength=0);
+
+	CString GetTreePath(HTREEITEM hTree);
+	void DeleteTreeChildItem(HTREEITEM hTree);
+	// 1 查看磁盘分区
+	// 2 查看指定目录下文件
+	// 3 打开文件
+	// 4 查看文件
+	// 返回值是命令号，小于0则错误
+	int SendCommandPacket(int nCmd,bool bAutoclose = true, BYTE* pData = NULL,size_t nLength=0);
 
 public:
 	CTreeCtrl m_Tree;
+	afx_msg void OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult);
 };

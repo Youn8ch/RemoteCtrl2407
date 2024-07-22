@@ -65,18 +65,6 @@ int MakeDriverInfo() {
 	return 0;
 }
 
-typedef struct file_info {
-	file_info() {
-		IsInvalid = 0;
-		IsDirectory = -1;
-		HasNext = 0;
-		memset(szFileName, 0, sizeof(szFileName));
-	}
-	BOOL IsInvalid; // 是否有效
-	BOOL IsDirectory; // 是否是目录 0否 1是
-	BOOL HasNext; // 是否还有后续 0否 1是
-	char szFileName[256]; // 文件名
-}FILEINFO, * PFILEINFO;
 
 int MakeDirectoryInfo() {
 	std::string path;
@@ -86,21 +74,31 @@ int MakeDirectoryInfo() {
 		LOGE("> Get file path failed <");
 		return -1;
 	}
+
+	//LOGI("Path to switch: %s", path.c_str());
+	//char currentPath[FILENAME_MAX];
+	//_getcwd(currentPath, FILENAME_MAX);
+	//LOGI("Current working directory: %s", currentPath);
+
+	if (path.length() == 2 && path[1] == ':') {
+		path.append("\\");
+	}
+
 	if (_chdir(path.c_str()) != 0)
 	{
 		FILEINFO finfo;
-		finfo.IsInvalid = TRUE;
-		finfo.IsDirectory = TRUE;
 		finfo.HasNext = FALSE;
-		memcpy(finfo.szFileName, path.c_str(), path.size());
 		// ListFileInfo.push_back(finfo);
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		CServerSocket::getInstance()->Send(pack);
 		LOGE("> No permission to access the directory <");
 		return -2;
 	}
+	//_getcwd(currentPath, FILENAME_MAX);
+	//LOGI("Current working directory: %s", currentPath);
+
 	_finddata_t fdata;
-	int hfind = 0;
+	long long hfind = 0;
 	if ((hfind = _findfirst("*", &fdata)) == -1) {
 		LOGE("> No file being the path <");
 		return -3;
@@ -112,6 +110,7 @@ int MakeDirectoryInfo() {
 		finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;
 		memcpy(finfo.szFileName, fdata.name, strlen(fdata.name));
 		// ListFileInfo.push_back(finfo);
+		LOGI("FILE[%s]", finfo.szFileName);
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		CServerSocket::getInstance()->Send(pack);
 	} while (!_findnext(hfind, &fdata));
