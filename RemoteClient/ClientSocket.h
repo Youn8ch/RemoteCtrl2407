@@ -216,7 +216,6 @@ public:
 			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0)
 			{
-				delete[] buffer;
 				return -1;
 			}
 			index += len;

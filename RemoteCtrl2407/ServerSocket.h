@@ -221,7 +221,6 @@ public:
 			size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
 			if (len <= 0)
 			{
-				delete[] buffer;
 				return -1;
 			}
 			index += len;
