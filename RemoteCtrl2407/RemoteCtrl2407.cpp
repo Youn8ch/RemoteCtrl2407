@@ -125,6 +125,8 @@ int RunFile() {
 	std::string path;
 	CServerSocket::getInstance()->GetFilePath(path);
 	ShellExecuteA(NULL, NULL, path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+	CPacket pack(3, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
 	return 0;
 }
 
@@ -356,6 +358,17 @@ int UnLockMachine() {
 	return 0;
 }
 
+int DeleteLocalFile() {
+	std::string path;
+	CServerSocket::getInstance()->GetFilePath(path);
+	// TCHAR sPath[MAX_PATH] = _T("");
+	// mbstowcs(sPath, path.c_str(), path.size());
+	DeleteFileA(path.c_str());
+	CPacket pack(9, NULL, 0);
+	bool ret = CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
 
 int TestConnect() {
 	LOGI("test conn 666");
@@ -394,6 +407,9 @@ int ExcuteCommand(int nCmd) {
 		break;
 	case 8:
 		ret = UnLockMachine();
+		break;
+	case 9:
+		ret = DeleteLocalFile();
 		break;
 	case 666:
 		ret = TestConnect();

@@ -277,6 +277,31 @@ void CRemoteClientDlg::LoadFileInfo()
 	pClient->CloseClient();
 }
 
+void CRemoteClientDlg::LoadFileCurInfo()
+{
+	HTREEITEM hTreeSelected = m_Tree.GetSelectedItem();
+	CString strPath = GetTreePath(hTreeSelected);
+	if (hTreeSelected == NULL) return;
+	m_List.DeleteAllItems();
+	int ncmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	CClientSocket* pClient = CClientSocket::getInstance();
+	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	while (pInfo->HasNext) {
+		TRACE("[%s] is dir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		if (!(pInfo->IsDirectory))
+		{
+			m_List.InsertItem(0, pInfo->szFileName);
+		}
+		int cmd = pClient->DealCommand();
+		TRACE("DIR ack : %d\r\n", cmd);
+		if (cmd < 0) break;
+		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	}
+	pClient->CloseClient();
+
+
+}
+
 CString CRemoteClientDlg::GetTreePath(HTREEITEM hTree) {
 	CString strRet, strTmp;
 	do
@@ -406,13 +431,24 @@ void CRemoteClientDlg::OnDownloadFile()
 
 void CRemoteClientDlg::OnDeleteFile()
 {
-	// TODO: 在此添加命令处理程序代码
+	HTREEITEM hSelected = m_Tree.GetSelectedItem();
+	CString strPath = GetTreePath(hSelected);
+	int nSelected = m_List.GetSelectionMark();
+	CString strFile = m_List.GetItemText(nSelected, 0);
+	strFile = GetTreePath(hSelected) + "\\" + strFile;
+	int ret = SendCommandPacket(9, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+	if (ret < 0)
+	{
+		AfxMessageBox("删除文件命令失败");
+		return;
+	}
+
+	LoadFileCurInfo();
 }
 
 
 void CRemoteClientDlg::OnRunFile()
 {
-	// TODO: 在此添加命令处理程序代码
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
 	CString strPath = GetTreePath(hSelected);
 	int nSelected = m_List.GetSelectionMark();

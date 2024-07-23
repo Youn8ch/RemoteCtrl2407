@@ -244,7 +244,7 @@ public:
 		return send(m_client, (const char*)pack.getData(), pack.getSize(), 0) > 0;
 	}
 	bool GetFilePath(std::string& path) {
-		if (m_packet.sCmd >= 2 && m_packet.sCmd <= 4)
+		if (m_packet.sCmd == 9 ||(m_packet.sCmd >= 2 && m_packet.sCmd <= 4))
 		{
 			path = m_packet.strData;
 			return true;
