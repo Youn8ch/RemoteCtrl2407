@@ -213,24 +213,23 @@ public:
 			LOGE("> Not enough mem ");
 			return -2;
 		}
-		memset(buffer, 0, BUFFER_SIZE);
-		size_t index = 0;
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
-			if (len <= 0)
+			size_t len = recv(m_client, buffer + m_index, BUFFER_SIZE - m_index, 0);
+			m_index += len;
+			if (m_index <= 0)
 			{
 				return -1;
 			}
-			index += len;
+			size_t index = m_index;
 			m_packet = CPacket((const BYTE*)buffer, index);
 
 			// 如果数据包处理后剩余数据，可以适当移动缓冲区内容
 			if (index < BUFFER_SIZE) {
 				memmove(buffer, buffer + index, BUFFER_SIZE - index);
 			}
-			index = 0;
+			m_index -= index;
 			return m_packet.sCmd;
 		}
 	}
@@ -269,10 +268,13 @@ public:
 	void CloseClient() {
 		closesocket(m_client);
 		m_client = INVALID_SOCKET;
+		m_buffer.clear();
+		m_index = 0;
 	}
 
 private:
 	std::vector<char> m_buffer;
+	int m_index;
 	SOCKET m_sock;
 	SOCKET m_client;
 	CPacket m_packet;

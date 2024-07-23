@@ -40,6 +40,8 @@ public:
 
 private:
 	void LoadFileInfo();
+
+	// 后缀没带"\\"
 	CString GetTreePath(HTREEITEM hTree);
 	void DeleteTreeChildItem(HTREEITEM hTree);
 	// 1 查看磁盘分区
