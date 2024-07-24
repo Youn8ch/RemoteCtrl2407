@@ -12,6 +12,7 @@
 #define new DEBUG_NEW
 #endif
 #include "ClientSocket.h"
+#include "WatchDialog.h"
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -82,6 +83,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket)
+	ON_BN_CLICKED(IDC_BTN_STARTWATCH, &CRemoteClientDlg::OnBnClickedBtnStartwatch)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -261,8 +264,24 @@ void CRemoteClientDlg::threadWatchData()
 			if (cmd == 6)
 			{
 				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-				m_imgfull = true;
-				// TODO 存入 CIMAGE
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
+				if (hMem)
+				{
+					TRACE("no memory !");
+					Sleep(1);
+					continue;
+				}
+				IStream* pStream = NULL;
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+				if (hRet == S_OK)
+				{
+					ULONG length = 0;
+					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					m_image.Load(pStream);
+					m_imgfull = true;
+				}				
 			}
 		}
 		else
@@ -535,4 +554,20 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	CString strFile = (LPCSTR)lParam;
 	int ret = SendCommandPacket(wParam >> 1, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 	return ret;
+}
+
+
+void CRemoteClientDlg::OnBnClickedBtnStartwatch()
+{
+	_beginthread(CRemoteClientDlg::threadEntryForWatchData,0,this);
+	CWatchDialog dlg(this);
+	dlg.DoModal();
+}
+
+
+void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	CDialogEx::OnTimer(nIDEvent);
 }

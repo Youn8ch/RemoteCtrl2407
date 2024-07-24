@@ -40,6 +40,15 @@ public:
 	CString m_Port;
 	afx_msg void OnBnClickedButtonFile();
 
+
+public:
+	bool isFull() const {
+		return m_imgfull;
+	}
+	CImage& GetImage() {
+		return m_image;
+	}
+
 private:
 	CImage m_image; // 缓存
 	bool m_imgfull; // true 有， false 无
@@ -79,4 +88,6 @@ public:
 	afx_msg void OnDeleteFile();
 	afx_msg void OnRunFile();
 	afx_msg LRESULT OnSendPacket(WPARAM wParam,LPARAM lParam);
+	afx_msg void OnBnClickedBtnStartwatch();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
