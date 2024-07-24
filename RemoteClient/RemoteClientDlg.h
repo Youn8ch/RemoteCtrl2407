@@ -48,6 +48,9 @@ public:
 	CImage& GetImage() {
 		return m_image;
 	}
+	void SetImgStatus(bool isfull = false) {
+		m_imgfull = isfull;
+	}
 
 private:
 	CImage m_image; // 缓存
