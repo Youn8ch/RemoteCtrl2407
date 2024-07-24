@@ -41,6 +41,13 @@ public:
 	afx_msg void OnBnClickedButtonFile();
 
 private:
+	CImage m_image; // 缓存
+	bool m_imgfull; // true 有， false 无
+
+private:
+	static void threadEntryForWatchData(void* arg); // 转接
+	void threadWatchData();
+
 	static void threadEntryForDownFile(void* arg);
 	void threadDownFile();
 	void LoadFileInfo();

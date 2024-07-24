@@ -123,6 +123,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
+	m_imgfull = false;
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -218,7 +219,7 @@ void CRemoteClientDlg::OnBnClickedButtonFile()
 int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoclose, BYTE* pData, size_t nLength)
 {
 
-	UpdateData();
+	UpdateData(); // 不是一个主线程调用的话 会崩溃 用msg
 	CClientSocket* pClient = CClientSocket::getInstance();
 	bool ret = pClient->Initsocket(m_server_address, atoi((LPCTSTR)m_Port)); // TODO 返回值
 	if (!ret)
@@ -234,6 +235,43 @@ int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoclose, BYTE* pData, 
 	TRACE("ACK cmd = %d\r\n", cmd);
 	if (bAutoclose) pClient->CloseClient();
 	return cmd;
+}
+
+void CRemoteClientDlg::threadEntryForWatchData(void* arg)
+{
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadWatchData();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatchData()
+{
+	CClientSocket* pClient = NULL;
+	do
+	{
+		pClient = CClientSocket::getInstance();
+	} while (pClient==NULL);
+	for (;;)
+	{
+		CPacket pack(6, NULL,0);
+		bool ret = pClient->Send(pack);
+		if (ret)
+		{
+			int cmd = pClient->DealCommand();
+			if (cmd == 6)
+			{
+				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+				m_imgfull = true;
+				// TODO 存入 CIMAGE
+			}
+		}
+		else
+		{
+			Sleep(1);
+		}
+
+	}
+
 }
 
 void CRemoteClientDlg::threadEntryForDownFile(void* arg)
