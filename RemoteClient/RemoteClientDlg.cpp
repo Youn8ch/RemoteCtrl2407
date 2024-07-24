@@ -277,12 +277,16 @@ void CRemoteClientDlg::threadWatchData()
 			HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
 			if (hRet == S_OK)
 			{
+				std::lock_guard<std::mutex> lock(m_imageMutex);
 				ULONG length = 0;
 				pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
 				LARGE_INTEGER bg = { 0 };
 				pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-				if ((HBITMAP)m_image != NULL) m_image.Destroy();
-				m_image.Load(pStream);
+				if (m_image.IsDIBSection())
+				{
+					m_image.Destroy();
+				}
+				m_image.Load(pStream); 
 				m_imgfull = true;
 			}
 			pStream->Release();

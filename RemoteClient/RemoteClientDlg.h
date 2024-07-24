@@ -4,6 +4,7 @@
 
 #pragma once
 #include "StatusDlg.h"
+#include <mutex>
 
 #define WM_SEND_PACKET (WM_USER + 1)
 
@@ -51,11 +52,11 @@ public:
 	void SetImgStatus(bool isfull = false) {
 		m_imgfull = isfull;
 	}
+	std::mutex m_imageMutex;
 
 private:
 	CImage m_image; // 缓存
 	bool m_imgfull; // true 有， false 无
-
 private:
 	static void threadEntryForWatchData(void* arg); // 转接
 	void threadWatchData();

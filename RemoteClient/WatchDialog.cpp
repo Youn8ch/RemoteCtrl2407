@@ -56,6 +56,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		if (pParent->isFull())
 		{
+			std::lock_guard<std::mutex> lock(pParent->m_imageMutex);
 			pParent->GetImage().BitBlt(m_picture.GetDC()->GetSafeHdc(),0,0,SRCCOPY);
 			m_picture.InvalidateRect(NULL);
 			pParent->GetImage().Destroy();
