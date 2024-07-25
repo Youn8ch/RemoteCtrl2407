@@ -255,41 +255,41 @@ void CRemoteClientDlg::threadWatchData()
 	{
 		pClient = CClientSocket::getInstance();
 	} while (pClient==NULL);
-	ULONGLONG tick = GetTickCount64();
 	for (;;)
 	{
-		if (GetTickCount64()-tick < 50)
-		{
-			Sleep(GetTickCount64() - tick);
-		}
-		int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 0);
-		if (ret == 6)
-		{
-			BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-			HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
-			if (hMem==NULL)
+		if (m_imgfull == false) {
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 0);
+			if (ret == 6)
 			{
-				TRACE("no memory !");
-				Sleep(1);
-				continue;
-			}
-			IStream* pStream = NULL;
-			HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
-			if (hRet == S_OK)
-			{
-				std::lock_guard<std::mutex> lock(m_imageMutex);
-				ULONG length = 0;
-				pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
-				LARGE_INTEGER bg = { 0 };
-				pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-				if (m_image.IsDIBSection())
+				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
+				if (hMem == NULL)
 				{
-					m_image.Destroy();
+					TRACE("no memory !");
+					Sleep(1);
+					continue;
 				}
-				m_image.Load(pStream); 
-				m_imgfull = true;
+				IStream* pStream = NULL;
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+				if (hRet == S_OK)
+				{
+					// std::lock_guard<std::mutex> lock(m_imageMutex);
+					ULONG length = 0;
+					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					/*if (m_image.IsDIBSection())
+					{
+						m_image.Destroy();
+					}*/
+					m_image.Load(pStream);
+					m_imgfull = true;
+				}
 			}
-			pStream->Release();
+			else
+			{
+				Sleep(1);
+			}
 		}
 		else
 		{
