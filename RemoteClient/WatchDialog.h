@@ -41,4 +41,6 @@ public:
 	afx_msg void OnStnClickedWatch();
 	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
 	virtual void OnOK();
+	afx_msg void OnBnClickedBtnLock();
+	afx_msg void OnBnClickedBtnUnlock();
 };

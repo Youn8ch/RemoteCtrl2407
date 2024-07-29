@@ -121,7 +121,8 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData();
-	m_server_address = 0x7F000001;
+	// m_server_address = 0x7F000001;
+	m_server_address = 0xC0A83865; // 192.168.56.101
 	m_Port = _T("8554");
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
@@ -221,7 +222,7 @@ void CRemoteClientDlg::OnBnClickedButtonFile()
 
 int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoclose, BYTE* pData, size_t nLength)
 {
-
+	TRACE(">Try connect<");
 	UpdateData(); // 不是一个主线程调用的话 会崩溃 用msg
 	CClientSocket* pClient = CClientSocket::getInstance();
 	bool ret = pClient->Initsocket(m_server_address, atoi((LPCTSTR)m_Port)); // TODO 返回值
@@ -576,6 +577,8 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	case 6:
+	case 7:
+	case 8:
 	{
 		ret = SendCommandPacket(cmd, wParam & 1);
 		break;
