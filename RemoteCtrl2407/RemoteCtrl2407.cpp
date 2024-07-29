@@ -177,6 +177,9 @@ int MouseEvent() {
 		case 2:	// 中键
 			nFlag = 4;
 			break;
+		case 4: // 没有按键
+			nFlag = 8;
+			break;
 		default:
 			break;
 		}
