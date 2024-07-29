@@ -276,7 +276,7 @@ int SendScreen() {
 	int nWidth = GetDeviceCaps(hScreen, HORZRES);
 	int nHeigth = GetDeviceCaps(hScreen, VERTRES);
 	screen.Create(nWidth, nHeigth, nBitPerpixel);
-	BitBlt(screen.GetDC(), 0, 0, 1920, 1080, hScreen, 0, 0, SRCCOPY);
+	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeigth, hScreen, 0, 0, SRCCOPY);
 	ReleaseDC(NULL, hScreen);
 	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
 	if (hMem == NULL) return -1;

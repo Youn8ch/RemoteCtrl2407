@@ -255,7 +255,7 @@ void CRemoteClientDlg::threadWatchData()
 	{
 		pClient = CClientSocket::getInstance();
 	} while (pClient==NULL);
-	for (;;)
+	while (!m_isClosed)
 	{
 		if (m_imgfull == false) {
 			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 0);
@@ -278,10 +278,12 @@ void CRemoteClientDlg::threadWatchData()
 					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-					/*if (m_image.IsDIBSection())
+					if (m_image.IsDIBSection())
 					{
 						m_image.Destroy();
-					}*/
+					}
+					// if ((HBITMAP)m_image!=NULL) m_image.Destroy();
+
 					m_image.Load(pStream);
 					m_imgfull = true;
 				}
@@ -587,9 +589,12 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 
 void CRemoteClientDlg::OnBnClickedBtnStartwatch()
 {
+	m_isClosed = false;
 	CWatchDialog dlg(this);
-	_beginthread(CRemoteClientDlg::threadEntryForWatchData,0,this);
+	HANDLE hTread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData,0,this);
 	dlg.DoModal();
+	m_isClosed = true;
+	WaitForSingleObject(hTread,500);
 }
 
 
