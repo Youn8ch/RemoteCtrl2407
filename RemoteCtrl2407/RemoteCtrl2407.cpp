@@ -101,6 +101,11 @@ int MakeDirectoryInfo() {
 	long long hfind = 0;
 	if ((hfind = _findfirst("*", &fdata)) == -1) {
 		LOGE("> No file being the path <");
+		FILEINFO finfo;
+		finfo.HasNext = FALSE;
+		// ListFileInfo.push_back(finfo);
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		CServerSocket::getInstance()->Send(pack);
 		return -3;
 	}
 
