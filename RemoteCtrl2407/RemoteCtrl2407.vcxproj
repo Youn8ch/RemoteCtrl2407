@@ -143,6 +143,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="LockInfoDialog.h" />
     <ClInclude Include="Log.h" />
+    <ClInclude Include="Packet.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="RemoteCtrl2407.h" />
     <ClInclude Include="Resource.h" />

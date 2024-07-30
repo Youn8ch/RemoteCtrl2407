@@ -47,33 +47,17 @@ int main()
         {
 			CCommand cmd;
 			CServerSocket* pserver = CServerSocket::getInstance();
-			int count = 0;
-			if (pserver->Initsocket()==false)
+			int ret = pserver->Run(&CCommand::RunCommand, &cmd);
+			switch (ret)
 			{
+			case -1:
 				LOGE(">server socket init failed<"); exit(0);
-			}
-			LOGI(">server socket init done!<");
-			while (CServerSocket::getInstance()!=NULL)
-			{
-				if (pserver->AcceptClient() == false) {
-					if (count >= 3)
-					{
-						LOGE(">failed conn 3<"); exit(0);
-					}
-					LOGE(">failed conn Retry<");
-					count++;
-				}
-				int ret = pserver->DealCommand();
-				LOGI("Dealcommand ret = %d", ret);
-				if (ret > 0)
-				{
-					ret = cmd.ExcuteCommand(pserver->GetPacket().sCmd);
-					if (ret!=0)
-					{
-						LOGE(">Cmd Excute failed, ret = %d, cmd = %d",ret, pserver->GetPacket().sCmd);
-					}
-					pserver->CloseClient();
-				}
+				break;
+			case -2:
+				LOGE(">failed conn 3<"); exit(0);
+				break;
+			default:
+				break;
 			}
         }
     }
