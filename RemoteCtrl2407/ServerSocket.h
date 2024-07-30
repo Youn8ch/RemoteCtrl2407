@@ -2,12 +2,12 @@
 #include <WS2tcpip.h>
 #include "ServerSocket.h"
 #include "Log.h"
-
+#include "Tool.h"
 
 #pragma pack(push)
 #pragma pack(1)
 
-void Dump(BYTE* pdata, size_t length);
+
 
 
 class CPacket
@@ -240,7 +240,7 @@ public:
 	}
 	bool Send(CPacket& pack) {
 		if (m_client == -1) return false;
-		Dump((BYTE*)pack.getData(), pack.getSize());
+		CTool::Dump((BYTE*)pack.getData(), pack.getSize());
 		return send(m_client, (const char*)pack.getData(), pack.getSize(), 0) > 0;
 	}
 	bool GetFilePath(std::string& path) {
