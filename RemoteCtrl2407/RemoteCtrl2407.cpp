@@ -30,9 +30,9 @@ CWinApp theApp;
 using namespace std;
 
 
-void Dump(BYTE* pdata, size_t length) {
+void Dump(BYTE* pdata, size_t nSize) {
 	std::string strout;
-	for (size_t i = 0; i < length; i++)
+	for (size_t i = 0; i < nSize; i++)
 	{
 		char buf[8] = "";
 		if (i > 0)

@@ -279,8 +279,8 @@ private:
 	SOCKET m_client;
 	CPacket m_packet;
 private:
-	CServerSocket operator = (const CServerSocket&) {}
-	CServerSocket(const CServerSocket&) : m_sock(0), m_client(0) {}
+	CServerSocket& operator = (const CServerSocket& ss) {}
+	CServerSocket(const CServerSocket& ss) : m_sock(0), m_client(0),m_index(0) {}
 	CServerSocket() {
 		m_client = INVALID_SOCKET;
 		m_sock = INVALID_SOCKET;
