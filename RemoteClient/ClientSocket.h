@@ -276,7 +276,7 @@ private:
 	CPacket m_packet;
 private:
 	CClientSocket operator = (const CClientSocket&) {}
-	CClientSocket(const CClientSocket&) : m_sock(INVALID_SOCKET) {}
+	CClientSocket(const CClientSocket& ss) : m_sock(INVALID_SOCKET) {}
 	CClientSocket() {
 		m_sock = INVALID_SOCKET;
 		if (InitSockEnv() == FALSE) {
