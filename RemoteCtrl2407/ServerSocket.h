@@ -123,27 +123,7 @@ public:
 		CTool::Dump((BYTE*)pack.getData(), pack.getSize());
 		return send(m_client, (const char*)pack.getData(), pack.getSize(), 0) > 0;
 	}
-	bool GetFilePath(std::string& path) {
-		if (m_packet.sCmd == 9 ||(m_packet.sCmd >= 2 && m_packet.sCmd <= 4))
-		{
-			path = m_packet.strData;
-			return true;
-		}
-		return false;
-	}
 
-	bool GetMouseEvent(MOUSEEVENT& mouse) {
-		if (m_packet.sCmd == 5)
-		{
-			memcpy(&mouse, m_packet.strData.c_str(), sizeof(MOUSEEVENT));
-			return true;
-		}
-		return false;
-	}
-
-	CPacket& GetPacket() {
-		return m_packet;
-	}
 
 	void CloseClient() {
 		if (m_client!= INVALID_SOCKET)

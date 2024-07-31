@@ -191,7 +191,7 @@ protected:
 			rlen = fread(buffer, 1, 1024, pFile);
 			listPackets.push_back(CPacket(4, (BYTE*)buffer, rlen));
 		} while (rlen >= 1024);
-		listPackets.push_back(CPacket(4, NULL, 0));
+		// listPackets.push_back(CPacket(4, NULL, 0));
 		fclose(pFile);
 		return 0;
 	}
