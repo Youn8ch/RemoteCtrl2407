@@ -96,7 +96,7 @@ public:
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = recv(m_client, buffer + m_index, BUFFER_SIZE - m_index, 0);
+			size_t len = (size_t)(recv(m_client, buffer + m_index, BUFFER_SIZE - m_index, 0));
 			m_index += len;
 			if (m_index <= 0)
 			{
@@ -139,7 +139,7 @@ private:
 	SOCKET_CALLBACK m_callback;
 	void* m_arg;
 	std::vector<char> m_buffer;
-	int m_index;
+	size_t m_index;
 	SOCKET m_sock;
 	SOCKET m_client;
 	CPacket m_packet;

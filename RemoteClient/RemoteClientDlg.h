@@ -95,4 +95,6 @@ public:
 	afx_msg LRESULT OnSendPacket(WPARAM wParam,LPARAM lParam);
 	afx_msg void OnBnClickedBtnStartwatch();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnEnChangeEditPort2();
+	afx_msg void OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult);
 };

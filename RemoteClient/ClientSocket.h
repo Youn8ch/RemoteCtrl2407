@@ -97,7 +97,7 @@ public:
 	int getSize() {
 		return nLength + 6;
 	}
-	const char* getData() {
+	const char* getData(std::string & strOut) const {
 		strOut.resize(nLength + 6);
 		BYTE* pData = (BYTE*)strOut.c_str();
 		*(WORD*)pData = sHead; pData += 2;
@@ -114,7 +114,9 @@ public:
 	WORD sCmd; // 控制命令
 	std::string strData; // 包数据
 	WORD sSum; // 和校验
-	std::string strOut; // 整个包的数据
+	// std::string strOut; // 整个包的数据
+
+
 };
 
 #pragma pack(pop)
@@ -174,7 +176,7 @@ public:
 		}
 		return m_instance;
 	}
-	bool Initsocket(int nIp,int nPort) {
+	bool Initsocket() {
 		m_sock = socket(PF_INET, SOCK_STREAM, 0); // TODO : 校验
 		if (m_sock == -1)
 		{
@@ -183,8 +185,8 @@ public:
 		sockaddr_in serv_adr;
 		memset(&serv_adr, 0, sizeof(serv_adr));
 		serv_adr.sin_family = AF_INET;
-		serv_adr.sin_addr.s_addr = htonl(nIp);
-		serv_adr.sin_port = htons(nPort);
+		serv_adr.sin_addr.s_addr = htonl(m_nIp);
+		serv_adr.sin_port = htons(m_nPort);
 		if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 		{
 			LOGE("connect addr error");
@@ -212,7 +214,7 @@ public:
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
+			size_t len = (size_t)recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
 			m_index += len;
 			if (m_index <= 0)
 			{
@@ -235,9 +237,11 @@ public:
 		if (m_sock == -1) return false;
 		return send(m_sock, pdata, size, 0) > 0;
 	}
-	bool Send(CPacket& pack) {
+	bool Send(const CPacket& pack) {
 		if (m_sock == -1) return false;
-		return send(m_sock, (const char*)pack.getData(), pack.getSize(), 0) > 0;
+		std::string strOut;
+		pack.getData(strOut);
+		return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& path) {
 		if (m_packet.sCmd >= 2 && m_packet.sCmd <= 4)
@@ -264,21 +268,43 @@ public:
 	void CloseClient() {
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
+		Clearbuffer();
+	}
+
+	void UpdateAddress(int nip, int nport) {
+		m_nIp = nip;
+		m_nPort = nport;
+	}
+
+	void Clearbuffer() {
 		m_buffer.clear();
 		m_index = 0;
 	}
 
-
 private:
 	std::vector<char> m_buffer;
-	int m_index;
+	size_t m_index;
 	SOCKET m_sock;
 	CPacket m_packet;
+
+private:
+	int m_nIp;
+	int m_nPort;
+
 private:
 	CClientSocket operator = (const CClientSocket&) {}
-	CClientSocket(const CClientSocket& ss) : m_sock(INVALID_SOCKET) {}
-	CClientSocket() {
-		m_sock = INVALID_SOCKET;
+	CClientSocket(const CClientSocket& ss){
+		m_nIp = ss.m_nIp;
+		m_nPort = ss.m_nPort;
+		m_sock = ss.m_sock;
+		m_index = ss.m_index;
+		memcpy(&m_buffer, &ss.m_buffer, m_index);
+	}
+	CClientSocket() :
+		m_sock(INVALID_SOCKET),
+		m_index(0),
+		m_nIp(INADDR_ANY),
+		m_nPort(0) {
 		if (InitSockEnv() == FALSE) {
 			LOGE("初始化网络环境失败");
 		}

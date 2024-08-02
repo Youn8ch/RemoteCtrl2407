@@ -7,7 +7,7 @@
 #include "RemoteClient.h"
 #include "RemoteClientDlg.h"
 #include "afxdialogex.h"
-
+#include "ClientController.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -85,6 +85,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket)
 	ON_BN_CLICKED(IDC_BTN_STARTWATCH, &CRemoteClientDlg::OnBnClickedBtnStartwatch)
 	ON_WM_TIMER()
+	ON_EN_CHANGE(IDC_EDIT_PORT2, &CRemoteClientDlg::OnEnChangeEditPort2)
+	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS_SERV, &CRemoteClientDlg::OnIpnFieldchangedIpaddressServ)
 END_MESSAGE_MAP()
 
 
@@ -222,23 +224,7 @@ void CRemoteClientDlg::OnBnClickedButtonFile()
 
 int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoclose, BYTE* pData, size_t nLength)
 {
-	TRACE(">Try connect<");
-	UpdateData(); // 不是一个主线程调用的话 会崩溃 用msg
-	CClientSocket* pClient = CClientSocket::getInstance();
-	bool ret = pClient->Initsocket(m_server_address, atoi((LPCTSTR)m_Port)); // TODO 返回值
-	if (!ret)
-	{
-		TRACE(">NET init failed<");
-		AfxMessageBox((LPCTSTR)"网络初始化失败");
-		return -1;
-	}
-	CPacket pack(nCmd, pData, nLength);
-	ret = pClient->Send(pack);
-	TRACE("send ? = %d\r\n", ret);
-	int cmd = pClient->DealCommand();
-	TRACE("ACK cmd = %d\r\n", cmd);
-	if (bAutoclose) pClient->CloseClient();
-	return cmd;
+	return  CClientController::getInstance()->SendCommandPacket(nCmd, bAutoclose, pData, nLength);
 }
 
 void CRemoteClientDlg::threadEntryForWatchData(void* arg)
@@ -251,42 +237,20 @@ void CRemoteClientDlg::threadEntryForWatchData(void* arg)
 void CRemoteClientDlg::threadWatchData()
 {
 	Sleep(50);
-	CClientSocket* pClient = NULL;
-	do
-	{
-		pClient = CClientSocket::getInstance();
-	} while (pClient==NULL);
+	CClientController* pCtrl = CClientController::getInstance();
 	while (!m_isClosed)
 	{
 		if (m_imgfull == false) {
-			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 0);
+			int ret = pCtrl->SendCommandPacket(6);
 			if (ret == 6)
 			{
-				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
-				if (hMem == NULL)
+				if (pCtrl->GetImage(m_image) == 0)
 				{
-					TRACE("no memory !");
-					Sleep(1);
-					continue;
-				}
-				IStream* pStream = NULL;
-				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
-				if (hRet == S_OK)
-				{
-					// std::lock_guard<std::mutex> lock(m_imageMutex);
-					ULONG length = 0;
-					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
-					LARGE_INTEGER bg = { 0 };
-					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-					if (m_image.IsDIBSection())
-					{
-						m_image.Destroy();
-					}
-					// if ((HBITMAP)m_image!=NULL) m_image.Destroy();
-
-					m_image.Load(pStream);
 					m_imgfull = true;
+				}
+				else
+				{
+					TRACE("> get image failed <\r\n");
 				}
 			}
 			else
@@ -333,8 +297,7 @@ void CRemoteClientDlg::threadDownFile()
 		strFile = GetTreePath(hSelected) + "\\" + strFile;
 		TRACE("%s\r\n", LPCSTR(strFile));
 		do {
-			int ret = SendMessage(WM_SEND_PACKET, 4 << 1 | 0, (LPARAM)(LPCSTR)strFile);
-			// int ret = SendCommandPacket(4, false, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+			int ret = SendCommandPacket(4, false, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 			if (ret < 0)
 			{
 				AfxMessageBox("执行下载文件失败");
@@ -606,4 +569,29 @@ void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void CRemoteClientDlg::OnEnChangeEditPort2()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialogEx::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+	UpdateData();
+	CClientController::getInstance()->UpdateAddress(
+		m_server_address, atoi((LPCTSTR)m_nPort));
+}
+
+
+void CRemoteClientDlg::OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMIPADDRESS pIPAddr = reinterpret_cast<LPNMIPADDRESS>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	UpdateData();
+	CClientController::getInstance()->UpdateAddress(
+		m_server_address, atoi((LPCTSTR)m_nPort));
 }

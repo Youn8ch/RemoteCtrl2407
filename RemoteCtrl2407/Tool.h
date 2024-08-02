@@ -19,5 +19,6 @@ public:
 		strout += "\n";
 		std::cout << "Dump:\n" << strout << std::endl;
 	}
+
 };
 
