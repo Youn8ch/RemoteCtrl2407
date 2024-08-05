@@ -116,3 +116,92 @@ LRESULT CClientController::OnShowWatcher(UINT nMsg, WPARAM wParam, LPARAM lParam
 {
 	return m_watchDlg.DoModal();
 }
+
+void CClientController::ThreadEntryWatchScreen(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->ThreadWatchScreen();
+	_endthread();
+}
+
+void CClientController::ThreadWatchScreen()
+{
+	Sleep(50);
+	while (!m_isClosed)
+	{
+		if (m_remoteDlg.isFull() == false) {
+			int ret = SendCommandPacket(6);
+			if (ret == 6)
+			{
+				CImage image;
+				if (GetImage(image)==0)
+				{
+					m_remoteDlg.SetImgStatus(true);
+				}
+				else
+				{
+					TRACE(_T(" 获取图片失败 ret = %d \r\n",ret));
+				}
+			}
+		}
+		Sleep(1);
+	}
+}
+
+void CClientController::ThreadEntryDownLoadFile(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->ThreadDownLoadFile();
+	_endthread();
+}
+
+void CClientController::ThreadDownLoadFile()
+{
+	FILE* pFile = fopen(m_strLocal, "wb+");
+	if (pFile == NULL)
+	{
+		AfxMessageBox("没有权限保存 或 文件无法创建");
+		m_statusDlg.ShowWindow(SW_HIDE);
+		m_remoteDlg.EndWaitCursor();
+		return;
+	}
+	do
+	{
+		CClientSocket* pClient = CClientSocket::getInstance();
+		int ret = SendCommandPacket(4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		if (ret < 0)
+		{
+			AfxMessageBox("执行下载文件失败");
+			TRACE("执行下载失败: ret = %d\r\n", ret);
+			break;
+		}
+		long long nlength = *(long long*)CClientSocket::getInstance()->GetPacket().strData.c_str();
+		if (nlength == 0)
+		{
+			AfxMessageBox("文件长度为0 或无法读取");
+			break;
+		}
+		long long nCount = 0;
+		// 添加线程函数
+		while (nCount < nlength)
+		{
+			ret = pClient->DealCommand();
+			if (ret < 0)
+			{
+				AfxMessageBox("传输失败");
+				TRACE("传输失败, ret = %d\r\n", ret);
+				break;
+			}
+			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pFile);
+			nCount += pClient->GetPacket().strData.size();
+		}
+		AfxMessageBox("传输成功");
+
+	} while (false);
+	
+	fclose(pFile);
+	CloseSocket();
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+
+}

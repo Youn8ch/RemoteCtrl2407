@@ -57,30 +57,13 @@ public:
 private:
 	CImage m_image; // 缓存
 	bool m_imgfull; // true 有， false 无
-	bool m_isClosed; // 监视是否关闭
+	
 private:
-	static void threadEntryForWatchData(void* arg); // 转接
-	void threadWatchData();
-
-	static void threadEntryForDownFile(void* arg);
-	void threadDownFile();
 	void LoadFileInfo();
 	void LoadFileCurInfo();
 	// 后缀没带"\\"
 	CString GetTreePath(HTREEITEM hTree);
 	void DeleteTreeChildItem(HTREEITEM hTree);
-	// 1 查看磁盘分区
-	// 2 查看指定目录下文件
-	// 3 打开文件
-	// 4 查看文件
-	// 9 删除文件
-	// 5 鼠标操作
-	// 6 屏幕内容
-	// 7 锁机
-	// 8 解锁
-	// 666 测试连接
-	// 返回值是命令号，小于0则错误
-	int SendCommandPacket(int nCmd,bool bAutoclose = true, BYTE* pData = NULL,size_t nLength=0);
 
 public:
 	CTreeCtrl m_Tree;
