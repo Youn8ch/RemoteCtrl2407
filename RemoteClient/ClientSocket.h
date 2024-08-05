@@ -3,6 +3,8 @@
 #include "framework.h"
 #include <WS2tcpip.h>
 #include "Log.h"
+#include <map>
+#include <list>
 #pragma pack(push)
 #pragma pack(1)
 
@@ -10,7 +12,7 @@ class CPacket
 {
 public:
 	CPacket() : sHead(0), nLength(0), sCmd(0), sSum(0) {}
-	CPacket(WORD nCmd, const BYTE* pdata, size_t nsize) {
+	CPacket(WORD nCmd, const BYTE* pdata, size_t nsize,HANDLE nevent) {
 		sHead = 0xFEFF;
 		nLength = (unsigned long)(nsize + 4);
 		sCmd = nCmd;
@@ -28,6 +30,7 @@ public:
 		{
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
+		this->hEvent = nevent;
 	}
 	CPacket(const CPacket& pack) {
 		sHead = pack.sHead;
@@ -35,8 +38,13 @@ public:
 		sCmd = pack.sCmd;
 		strData = pack.strData;
 		sSum = pack.sSum;
+		hEvent = pack.hEvent;
 	}
-	CPacket(const BYTE* pdata, size_t& nsize) : sHead(0), nLength(0), sCmd(0), sSum(0) {
+	CPacket(const BYTE* pdata, size_t& nsize) : sHead(0),
+		nLength(0),
+		sCmd(0),
+		sSum(0),
+		hEvent(INVALID_HANDLE_VALUE){
 		size_t i = 0;
 		for (; i < nsize; i++)
 		{
@@ -88,6 +96,7 @@ public:
 			sCmd = pack.sCmd;
 			strData = pack.strData;
 			sSum = pack.sSum;
+			hEvent = pack.hEvent;
 		}
 		return *this;
 	}
@@ -115,7 +124,7 @@ public:
 	std::string strData; // 包数据
 	WORD sSum; // 和校验
 	// std::string strOut; // 整个包的数据
-
+	HANDLE hEvent;
 
 };
 
@@ -178,6 +187,10 @@ public:
 		return m_instance;
 	}
 	bool Initsocket() {
+		if (m_sock!=INVALID_SOCKET)
+		{
+			CloseClient();
+		}
 		m_sock = socket(PF_INET, SOCK_STREAM, 0); // TODO : 校验
 		if (m_sock == -1)
 		{
@@ -270,6 +283,7 @@ public:
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
 		Clearbuffer();
+		// WSACleanup();
 	}
 
 	void UpdateAddress(int nip, int nport) {
@@ -282,7 +296,16 @@ public:
 		m_index = 0;
 	}
 
+public:
+	static void threadEntry(void* arg);
+protected:
+	void threadFunc();
+
 private:
+	std::list<CPacket> m_lstSend;
+	std::map<HANDLE, std::list<CPacket>> m_mapAck;
+
+
 	std::vector<char> m_buffer;
 	int m_index;
 	SOCKET m_sock;

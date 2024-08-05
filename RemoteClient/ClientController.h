@@ -51,7 +51,9 @@ public:
 		bool bAutoclose = true, 
 		BYTE* pData = NULL, 
 		size_t nLength = 0) {
-		SendPacket(CPacket(nCmd, pData, nLength));
+		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+		// TODO 投入队列
+		SendPacket(CPacket(nCmd, pData, nLength, hEvent));
 		int cmd = DealCommand();
 		TRACE("ACK cmd = %d\r\n", cmd);
 		if (bAutoclose) CloseSocket();

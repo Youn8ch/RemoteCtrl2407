@@ -23,3 +23,60 @@ std::string NEWGetErrorInfo(int wsaErrcode)
 	return ret;
 
 }
+
+void CClientSocket::threadEntry(void* arg)
+{
+	CClientSocket* thiz = (CClientSocket*)arg;
+	thiz->threadFunc();
+}
+
+void CClientSocket::threadFunc()
+{
+	if (Initsocket() == false)
+	{
+		return;
+	}
+	std::string strBuffer;
+	strBuffer.resize(BUFFER_SIZE);
+	char* pBuffer = (char*)strBuffer.c_str();
+	int index = 0;
+	while (m_sock != INVALID_SOCKET)
+	{
+		if (m_lstSend.size()>0)
+		{
+			CPacket& head = m_lstSend.front();
+			do
+			{
+				if (Send(head) == false)
+				{
+					TRACE(_T("发送失败\r\n"));
+					break;
+				}
+				auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>>(head.hEvent, std::list<CPacket>()));
+				int len = recv(m_sock, pBuffer, BUFFER_SIZE - index, 0);
+				if (len > 0 || index > 0)
+				{
+					index += len;
+					size_t size = index;
+					CPacket pack((BYTE*)pBuffer, size);
+					if (size > 0)
+					{
+						// TODO 对于文件夹信息获取有问题
+						pack.hEvent = head.hEvent;
+						pr.first->second.push_back(pack);
+						SetEvent(head.hEvent);
+					}
+					break;
+				}
+				else if (len <= 0 && index <= 0)
+				{
+					CloseClient();
+				}
+			} while (false);
+			m_lstSend.pop_front();
+		}
+	}
+
+
+
+}
