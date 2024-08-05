@@ -88,9 +88,9 @@ public:
 
 	void StartWatchScreen() {
 		m_isClosed = false;
-		CWatchDialog dlg(&m_remoteDlg);
+		// m_watchDlg.SetParent(&m_remoteDlg);
 		HANDLE hTread = (HANDLE)_beginthread(CClientController::ThreadEntryWatchScreen, 0, this);
-		dlg.DoModal();
+		m_watchDlg.DoModal();
 		m_isClosed = true;
 		WaitForSingleObject(hTread, 500);
 	}
@@ -112,7 +112,9 @@ protected:
 	static void releaseInstance() {
 		if (m_instance != NULL)
 		{
+			CClientController* tmp = m_instance;
 			m_instance = NULL;
+			delete tmp;
 		}
 	}
 	static unsigned __stdcall threadEntry(void* arg);
@@ -170,7 +172,7 @@ private:
 	{
 	public:
 		CHelper() {
-			CClientController::getInstance();
+		    // CClientController::getInstance();
 		}
 		~CHelper() {
 			CClientController::releaseInstance();

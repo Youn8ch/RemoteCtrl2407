@@ -19,6 +19,15 @@ public:
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_DIALOG_WATCH };
 #endif
+public:
+	void SetImgStatus(bool isfull = false) {
+		m_isfull = isfull;
+	}
+	bool isFull() const {
+		return m_isfull;
+	}
+protected:
+	bool m_isfull; // true 有， false 无
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持

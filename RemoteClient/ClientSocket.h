@@ -173,6 +173,7 @@ public:
 	static CClientSocket* getInstance() {
 		if (m_instance == NULL) {
 			m_instance = new CClientSocket();
+
 		}
 		return m_instance;
 	}
@@ -214,7 +215,7 @@ public:
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = (size_t)recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
+			int len = recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
 			m_index += len;
 			if (m_index <= 0)
 			{
@@ -283,7 +284,7 @@ public:
 
 private:
 	std::vector<char> m_buffer;
-	size_t m_index;
+	int m_index;
 	SOCKET m_sock;
 	CPacket m_packet;
 

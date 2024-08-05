@@ -43,20 +43,15 @@ public:
 
 
 public:
-	bool isFull() const {
-		return m_imgfull;
-	}
+
 	CImage& GetImage() {
 		return m_image;
 	}
-	void SetImgStatus(bool isfull = false) {
-		m_imgfull = isfull;
-	}
+
 	std::mutex m_imageMutex;
 
 private:
 	CImage m_image; // 缓存
-	bool m_imgfull; // true 有， false 无
 	
 private:
 	void LoadFileInfo();

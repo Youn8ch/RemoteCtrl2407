@@ -30,6 +30,8 @@ public:
 		serv_adr.sin_addr.s_addr = INADDR_ANY;
 		serv_adr.sin_port = htons(port);
 
+		LOGE(" > Initsocket port = %d <",port);
+
 		if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
 			return false;
 		}// TODO
