@@ -29,11 +29,6 @@ public:
 	void CloseSocket() {
 		CClientSocket::getInstance()->CloseClient();
 	}
-	bool SendPacket(const CPacket& pack) {
-		CClientSocket* pClient = CClientSocket::getInstance();
-		if (pClient->Initsocket() == false) return false;
-		pClient->Send(pack);
-	}
 
 	// 1 查看磁盘分区
 	// 2 查看指定目录下文件
@@ -47,17 +42,25 @@ public:
 	// 666 测试连接
 	// 返回值是命令号，小于0则错误
 	int SendCommandPacket(
-		int nCmd, 
+		int nCmd,
+		std::list<CPacket>* plstPackes = NULL,
 		bool bAutoclose = true, 
 		BYTE* pData = NULL, 
 		size_t nLength = 0) {
+		CClientSocket* pClient = CClientSocket::getInstance();
 		HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 		// TODO 投入队列
-		SendPacket(CPacket(nCmd, pData, nLength, hEvent));
-		int cmd = DealCommand();
-		TRACE("ACK cmd = %d\r\n", cmd);
-		if (bAutoclose) CloseSocket();
-		return cmd;
+		std::list<CPacket> lstpacks; // 应答
+		if (plstPackes == NULL)
+		{
+			plstPackes = &lstpacks;
+		}
+		pClient->SendPacket(CPacket(nCmd, pData, nLength, hEvent), *plstPackes);
+		if (plstPackes->size()>0)
+		{
+			return plstPackes->front().sCmd;
+		}
+		return -1;
 	}
 
 	int GetImage(CImage& image) {
@@ -122,8 +125,8 @@ protected:
 	static unsigned __stdcall threadEntry(void* arg);
 	void threadFunc();
 
-	LRESULT OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam);
-	LRESULT OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam);
+//	LRESULT OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam);
+//	LRESULT OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnShowWatcher(UINT nMsg, WPARAM wParam, LPARAM lParam);
 

@@ -59,7 +59,7 @@ void CClientSocket::threadFunc()
 					index += len;
 					size_t size = index;
 					CPacket pack((BYTE*)pBuffer, size);
-					if (size > 0)
+					if (size >= 0)
 					{
 						// TODO 对于文件夹信息获取有问题
 						pack.hEvent = head.hEvent;
@@ -74,9 +74,22 @@ void CClientSocket::threadFunc()
 				}
 			} while (false);
 			m_lstSend.pop_front();
+			break;
 		}
 	}
+	CloseClient();
+}
 
+bool CClientSocket::Send(const char* pdata, int size)
+{
+	if (m_sock == -1) return false;
+	return send(m_sock, pdata, size, 0) > 0;
+}
 
-
+bool CClientSocket::Send(const CPacket& pack)
+{
+	if (m_sock == -1) return false;
+	std::string strOut;
+	pack.getData(strOut);
+	return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0;
 }

@@ -238,7 +238,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	m_List.DeleteAllItems();
 	CString strPath = GetTreePath(hTreeSelected);
 
-	int ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int ncmd = CClientController::getInstance()->SendCommandPacket(2, NULL,false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	CClientController* pCtrl = CClientController::getInstance();
 	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	while (pInfo->HasNext) {
@@ -273,7 +273,7 @@ void CRemoteClientDlg::LoadFileCurInfo()
 	CString strPath = GetTreePath(hTreeSelected);
 	if (hTreeSelected == NULL) return;
 	m_List.DeleteAllItems();
-	int ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int ncmd = CClientController::getInstance()->SendCommandPacket(2, NULL, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	
 	CClientController* pCtrl = CClientController::getInstance();
 	
@@ -388,7 +388,7 @@ void CRemoteClientDlg::OnDeleteFile()
 	int nSelected = m_List.GetSelectionMark();
 	CString strFile = m_List.GetItemText(nSelected, 0);
 	strFile = GetTreePath(hSelected) + "\\" + strFile;
-	int ret = CClientController::getInstance()->SendCommandPacket(9, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+	int ret = CClientController::getInstance()->SendCommandPacket(9,NULL, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 	if (ret < 0)
 	{
 		AfxMessageBox("删除文件命令失败");
@@ -406,7 +406,7 @@ void CRemoteClientDlg::OnRunFile()
 	int nSelected = m_List.GetSelectionMark();
 	CString strFile = m_List.GetItemText(nSelected, 0);
 	strFile = GetTreePath(hSelected) + "\\" + strFile;
-	int ret = CClientController::getInstance()->SendCommandPacket(3, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+	int ret = CClientController::getInstance()->SendCommandPacket(3,NULL, true, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 	if (ret < 0)
 	{
 		AfxMessageBox("打开文件命令失败");
@@ -425,19 +425,19 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	case 4:
 	{
 		CString strFile = (LPCSTR)lParam;
-		ret = CClientController::getInstance()->SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+		ret = CClientController::getInstance()->SendCommandPacket(cmd, NULL, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 		break;
 	}
 	case 5: // 鼠标操作
 	{
-		ret = CClientController::getInstance()->SendCommandPacket(cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEVENT));
+		ret = CClientController::getInstance()->SendCommandPacket(cmd, NULL,wParam & 1, (BYTE*)lParam, sizeof(MOUSEEVENT));
 		break;
 	}
 	case 6:
 	case 7:
 	case 8:
 	{
-		ret = CClientController::getInstance()->SendCommandPacket(cmd, wParam & 1);
+		ret = CClientController::getInstance()->SendCommandPacket(cmd, NULL,wParam & 1);
 		break;
 	}
 	default:

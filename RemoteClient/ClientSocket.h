@@ -203,14 +203,13 @@ public:
 		serv_adr.sin_port = htons(m_nPort);
 		if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 		{
-			LOGE("connect addr error");
+			TRACE("connect addr error\r\n");
 			return false;
 		}
 		if (connect(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
-			LOGE(">connect server failed %d%s<",WSAGetLastError(), NEWGetErrorInfo(WSAGetLastError()).c_str());
+			TRACE(">connect server failed %d%s \r\n<",WSAGetLastError(), NEWGetErrorInfo(WSAGetLastError()).c_str());
 			return false;
 		}// TODO
-		LOGI(">connect server done!<");
 		return true;
 	}
 
@@ -245,18 +244,36 @@ public:
 			return m_packet.sCmd;
 		}
 	}
-
-
-	bool Send(const char* pdata, int size) {
-		if (m_sock == -1) return false;
-		return send(m_sock, pdata, size, 0) > 0;
+	bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks) {
+		if (m_sock == INVALID_SOCKET)
+		{
+			TRACE("SendPacket INIT\r\n");
+			if (Initsocket() == false)
+			{
+				return false;
+			}
+			_beginthread(&CClientSocket::threadEntry, 0, this);
+		}
+		
+		m_lstSend.push_back(pack);
+		WaitForSingleObject(pack.hEvent, INFINITE);
+		std::map<HANDLE, std::list<CPacket>>::iterator it;
+		it = m_mapAck.find(pack.hEvent);
+		if (it!=m_mapAck.end())
+		{
+			std::list<CPacket>::iterator i; 
+			i = it->second.begin();
+			while (i!=it->second.end())
+			{
+				lstpacks.push_back(*i);
+				i++;
+			}
+			m_mapAck.erase(it);
+			return true;
+		}
+		return false;
 	}
-	bool Send(const CPacket& pack) {
-		if (m_sock == -1) return false;
-		std::string strOut;
-		pack.getData(strOut);
-		return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0;
-	}
+
 	bool GetFilePath(std::string& path) {
 		if (m_packet.sCmd >= 2 && m_packet.sCmd <= 4)
 		{
@@ -287,8 +304,11 @@ public:
 	}
 
 	void UpdateAddress(int nip, int nport) {
-		m_nIp = nip;
-		m_nPort = nport;
+		if (m_nIp != nip  || m_nPort != nport)
+		{
+			m_nIp = nip;
+			m_nPort = nport;
+		}
 	}
 
 	void Clearbuffer() {
@@ -316,6 +336,8 @@ private:
 	int m_nPort;
 
 private:
+	bool Send(const char* pdata, int size);
+	bool Send(const CPacket& pack);
 	CClientSocket operator = (const CClientSocket&) {}
 	CClientSocket(const CClientSocket& ss){
 		m_nIp = ss.m_nIp;

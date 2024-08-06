@@ -13,8 +13,8 @@ CClientController* CClientController::getInstance()
 		m_instance = new CClientController();
 		TRACE(_T("CClientController SIZE = %d \r\n"), sizeof(*m_instance));
 		struct { UINT nMsg; MSGFUNC func; }MsgFUNCs[]{
-			{WM_SEND_PACK,&CClientController::OnSendPack},
-			{WM_SEND_DATA,&CClientController::OnSendData},
+			//{WM_SEND_PACK,&CClientController::OnSendPack},
+			//{WM_SEND_DATA,&CClientController::OnSendData},
 			{WM_SHOW_STATUS,&CClientController::OnShowStatus},
 			{WM_SHOW_WATCH,&CClientController::OnShowWatcher},
 			{(UINT) - 1,NULL}
@@ -95,19 +95,19 @@ void CClientController::threadFunc()
 	}
 }
 
-LRESULT CClientController::OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{
-	CClientSocket* pClient = CClientSocket::getInstance();
-	CPacket* pPacket = (CPacket*)wParam;
-	return pClient->Send(*pPacket);
-}
+//LRESULT CClientController::OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
+//{
+//	CClientSocket* pClient = CClientSocket::getInstance();
+//	CPacket* pPacket = (CPacket*)wParam;
+//	return pClient->Send(*pPacket);
+//}
 
-LRESULT CClientController::OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{
-	CClientSocket* pClient = CClientSocket::getInstance();
-	char* pBuffer = (char*)wParam;
-	return pClient->Send(pBuffer, (int)lParam);
-}
+//LRESULT CClientController::OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam)
+//{
+//	CClientSocket* pClient = CClientSocket::getInstance();
+//	char* pBuffer = (char*)wParam;
+//	return pClient->Send(pBuffer, (int)lParam);
+//}
 
 LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -132,11 +132,11 @@ void CClientController::ThreadWatchScreen()
 	while (!m_isClosed)
 	{
 		if (m_watchDlg.isFull() == false) {
-			int ret = SendCommandPacket(6);
+			std::list<CPacket> lstPacks;
+			int ret = SendCommandPacket(6, &lstPacks);
 			if (ret == 6)
 			{
-				CImage image;
-				if (GetImage(image)==0)
+				if (CTool::Bytes2Image(m_remoteDlg.GetImage(), lstPacks.front().strData)==0)
 				{
 					m_watchDlg.SetImgStatus(true);
 				}
@@ -170,7 +170,7 @@ void CClientController::ThreadDownLoadFile()
 	do
 	{
 		CClientSocket* pClient = CClientSocket::getInstance();
-		int ret = SendCommandPacket(4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		int ret = SendCommandPacket(4, NULL,false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
 		if (ret < 0)
 		{
 			AfxMessageBox("执行下载文件失败");
