@@ -28,6 +28,7 @@ void CClientSocket::threadEntry(void* arg)
 {
 	CClientSocket* thiz = (CClientSocket*)arg;
 	thiz->threadFunc();
+
 }
 
 void CClientSocket::threadFunc()
@@ -45,7 +46,9 @@ void CClientSocket::threadFunc()
 		{
 			return;
 		}
+		m_lock.lock();
 		CPacket& head = m_lstSend.front();
+		m_lock.unlock();
 		if (Send(head) == false)
 		{
 			TRACE(_T("·¢ËÍÊ§°Ü\r\n"));
@@ -70,7 +73,7 @@ void CClientSocket::threadFunc()
 				size = index;
 				CPacket pack((BYTE*)pBuffer, size);
 				TRACE(" index1 = %d \r\n", index);
-				if (size >= 0)
+				if (size > 0)
 				{
 					if (index < BUFFER_SIZE) {
 						memmove(pBuffer, pBuffer + size, index - size);
@@ -85,14 +88,19 @@ void CClientSocket::threadFunc()
 			}
 			else
 			{
+				TRACE(" !!!!!!!!!!! \r\n", index);
 				break;
 			}
-		} while (itclosed->second == false);
+		} while (itclosed->second == false || index > 0);
 		SetEvent(head.hEvent);
+		m_lock.lock();
 		m_mapAutoClosed.erase(itclosed);
 		m_lstSend.pop_front();
+		m_lock.unlock();
 		CloseClient();
 	}
+	Sleep(1);
+	m_hThread = INVALID_HANDLE_VALUE;
 }
 
 bool CClientSocket::Send(const char* pdata, int size)

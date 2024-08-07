@@ -5,6 +5,7 @@
 #include "Log.h"
 #include <map>
 #include <list>
+#include <mutex>
 #pragma pack(push)
 #pragma pack(1)
 
@@ -64,7 +65,8 @@ public:
 		nLength = *(DWORD*)(pdata + i); i += 4;
 		if (nLength + i > nsize)
 		{
-			nsize = 0; return;
+			nsize = 0; 
+			return;
 			// 包数据不全
 		}
 		sCmd = *(WORD*)(pdata + i); i += 2;
@@ -80,7 +82,7 @@ public:
 		{
 			sum += BYTE(strData[j]) & 0xFF;
 		}
-		if (sum = sSum)
+		if (sum == sSum)
 		{
 			nsize = i; // head 2 length 4 data
 			return;
@@ -247,23 +249,29 @@ public:
 		}
 	}
 	bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks,bool isAutoClosed = true) {
-
+		m_lock.lock();
 		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent,lstpacks));
 		m_mapAutoClosed.insert(std::pair < HANDLE, bool>(pack.hEvent, isAutoClosed));
 		m_lstSend.push_back(pack);
-		if (m_sock == INVALID_SOCKET)
+		m_lock.unlock();
+		while (!(m_sock == INVALID_SOCKET && m_hThread == INVALID_HANDLE_VALUE))
 		{
-			_beginthread(&CClientSocket::threadEntry, 0, this);
-		}
+			Sleep(1);
+		} 
+		m_hThread = (HANDLE)_beginthread(&CClientSocket::threadEntry, 0, this);
+		TRACE(" Thread : %d \r\n", m_hThread);
 		WaitForSingleObject(pack.hEvent, INFINITE);
 		// CloseHandle(pack.hEvent); // 回收事件句柄
 		std::map<HANDLE, std::list<CPacket>&>::iterator it;
+		m_lock.lock();
 		it = m_mapAck.find(pack.hEvent);
-		if (it!=m_mapAck.end())
+		if (it != m_mapAck.end())
 		{
 			m_mapAck.erase(it);
+			m_lock.unlock();
 			return true;
 		}
+		m_lock.unlock();
 		return false;
 	}
 
@@ -318,6 +326,9 @@ protected:
 	void threadFunc();
 
 private:
+
+	HANDLE m_hThread;
+	std::mutex m_lock;
 	std::list<CPacket> m_lstSend;
 	std::map<HANDLE, std::list<CPacket>&> m_mapAck;
 	std::map<HANDLE, bool> m_mapAutoClosed;
@@ -346,7 +357,8 @@ private:
 		m_sock(INVALID_SOCKET),
 		m_index(0),
 		m_nIp(INADDR_ANY),
-		m_nPort(0) {
+		m_nPort(0),
+		m_hThread(INVALID_HANDLE_VALUE){
 		if (InitSockEnv() == FALSE) {
 			LOGE("初始化网络环境失败");
 		}
