@@ -82,23 +82,15 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 
 			CRect rect;
 			m_picture.GetWindowRect(rect);
-			CImage image;
-			pParent->GetImage(image);
 			do
 			{
-				if (image == NULL) break;
-				if (m_nObjWidth == -1)
-				{
-					m_nObjWidth = image.GetWidth();
-				}
-				if (m_nObjHeight == -1)
-				{
-					m_nObjHeight = image.GetHeight();
-				}
-				image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+				if (m_image == NULL) break;
+				m_nObjWidth = m_image.GetWidth();
+				m_nObjHeight = m_image.GetHeight();
+				m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
 			} while (false);
 			m_picture.InvalidateRect(NULL);
-			image.Destroy();
+			m_image.Destroy();
 			m_isfull = false;
 			//
 		}

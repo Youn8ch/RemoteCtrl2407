@@ -43,16 +43,7 @@ public:
 
 
 public:
-
-	CImage& GetImage() {
-		return m_image;
-	}
-
-	std::mutex m_imageMutex;
-
-private:
-	CImage m_image; // 缓存
-	
+	std::mutex m_imageMutex;	
 private:
 	void LoadFileInfo();
 	void LoadFileCurInfo();

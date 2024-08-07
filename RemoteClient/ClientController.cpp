@@ -49,7 +49,8 @@ LRESULT CClientController::SendMessage(MSG msg)
 	if (hEvent == NULL) return -2;
 	MSGINFO info(msg);
 	PostThreadMessage(m_nThreadID, WM_SEND_MESSAGE,(WPARAM)&info,(LPARAM)hEvent);
-	WaitForSingleObject(hEvent, -1); // 互斥同步 等事件通知
+	WaitForSingleObject(hEvent, INFINITE); // 互斥同步 等事件通知
+	CloseHandle(hEvent);
 	return info.result;
 }
 
@@ -136,7 +137,7 @@ void CClientController::ThreadWatchScreen()
 			int ret = SendCommandPacket(6, &lstPacks);
 			if (ret == 6)
 			{
-				if (CTool::Bytes2Image(m_remoteDlg.GetImage(), lstPacks.front().strData)==0)
+				if (CTool::Bytes2Image(m_watchDlg.GetImage(), lstPacks.front().strData)==0)
 				{
 					m_watchDlg.SetImgStatus(true);
 				}

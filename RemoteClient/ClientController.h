@@ -55,7 +55,8 @@ public:
 		{
 			plstPackes = &lstpacks;
 		}
-		pClient->SendPacket(CPacket(nCmd, pData, nLength, hEvent), *plstPackes);
+		pClient->SendPacket(CPacket(nCmd, pData, nLength, hEvent), *plstPackes, bAutoclose);
+	    CloseHandle(hEvent); // 回收事件句柄
 		if (plstPackes->size()>0)
 		{
 			return plstPackes->front().sCmd;

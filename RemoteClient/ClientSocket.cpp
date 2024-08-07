@@ -32,52 +32,67 @@ void CClientSocket::threadEntry(void* arg)
 
 void CClientSocket::threadFunc()
 {
-	if (Initsocket() == false)
-	{
-		return;
-	}
+	
 	std::string strBuffer;
 	strBuffer.resize(BUFFER_SIZE);
 	char* pBuffer = (char*)strBuffer.c_str();
 	int index = 0;
-	while (m_sock != INVALID_SOCKET)
+	int len = 0;
+	size_t size = 0;
+	while (m_lstSend.size() > 0)
 	{
-		if (m_lstSend.size()>0)
+		if (Initsocket() == false)
 		{
-			CPacket& head = m_lstSend.front();
-			do
-			{
-				if (Send(head) == false)
-				{
-					TRACE(_T("发送失败\r\n"));
-					break;
-				}
-				auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>>(head.hEvent, std::list<CPacket>()));
-				int len = recv(m_sock, pBuffer, BUFFER_SIZE - index, 0);
-				if (len > 0 || index > 0)
-				{
-					index += len;
-					size_t size = index;
-					CPacket pack((BYTE*)pBuffer, size);
-					if (size >= 0)
-					{
-						// TODO 对于文件夹信息获取有问题
-						pack.hEvent = head.hEvent;
-						pr.first->second.push_back(pack);
-						SetEvent(head.hEvent);
-					}
-					break;
-				}
-				else if (len <= 0 && index <= 0)
-				{
-					CloseClient();
-				}
-			} while (false);
-			m_lstSend.pop_front();
+			return;
+		}
+		CPacket& head = m_lstSend.front();
+		if (Send(head) == false)
+		{
+			TRACE(_T("发送失败\r\n"));
+			Initsocket();
 			break;
 		}
+		std::map<HANDLE, std::list<CPacket>&>::iterator it;
+		it = m_mapAck.find(head.hEvent);
+		std::map<HANDLE, bool>::iterator itclosed;
+		itclosed = m_mapAutoClosed.find(head.hEvent);
+		if (it == m_mapAck.end() || itclosed == m_mapAutoClosed.end()) {
+			TRACE(" ACK ERROR \r\n");
+			break;
+		}
+		do
+		{
+			len = recv(m_sock, pBuffer+index, BUFFER_SIZE - index, 0);
+			if (len > 0 || index > 0)
+			{
+				TRACE(" len = %d \r\n", len);
+				index += len;
+				size = index;
+				CPacket pack((BYTE*)pBuffer, size);
+				TRACE(" index1 = %d \r\n", index);
+				if (size >= 0)
+				{
+					if (index < BUFFER_SIZE) {
+						memmove(pBuffer, pBuffer + size, index - size);
+					}
+					index -= size;
+					// TODO 对于文件夹信息获取有问题
+					pack.hEvent = head.hEvent;
+					it->second.push_back(pack);
+					// SetEvent(head.hEvent);
+				}
+				TRACE(" index2 = %d \r\n", index);
+			}
+			else
+			{
+				break;
+			}
+		} while (itclosed->second == false);
+		SetEvent(head.hEvent);
+		m_mapAutoClosed.erase(itclosed);
+		m_lstSend.pop_front();
+		CloseClient();
 	}
-	CloseClient();
 }
 
 bool CClientSocket::Send(const char* pdata, int size)

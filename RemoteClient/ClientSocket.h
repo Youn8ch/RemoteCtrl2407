@@ -207,9 +207,11 @@ public:
 			return false;
 		}
 		if (connect(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
-			TRACE(">connect server failed %d%s \r\n<",WSAGetLastError(), NEWGetErrorInfo(WSAGetLastError()).c_str());
+			TRACE(">connect server failed %d%s \r\n<", WSAGetLastError(), NEWGetErrorInfo(WSAGetLastError()).c_str());
+			TRACE(" m_sock = %d\r\n", m_sock);
 			return false;
 		}// TODO
+
 		return true;
 	}
 
@@ -244,30 +246,21 @@ public:
 			return m_packet.sCmd;
 		}
 	}
-	bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks) {
+	bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks,bool isAutoClosed = true) {
+
+		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent,lstpacks));
+		m_mapAutoClosed.insert(std::pair < HANDLE, bool>(pack.hEvent, isAutoClosed));
+		m_lstSend.push_back(pack);
 		if (m_sock == INVALID_SOCKET)
 		{
-			TRACE("SendPacket INIT\r\n");
-			if (Initsocket() == false)
-			{
-				return false;
-			}
 			_beginthread(&CClientSocket::threadEntry, 0, this);
 		}
-		
-		m_lstSend.push_back(pack);
 		WaitForSingleObject(pack.hEvent, INFINITE);
-		std::map<HANDLE, std::list<CPacket>>::iterator it;
+		// CloseHandle(pack.hEvent); // 回收事件句柄
+		std::map<HANDLE, std::list<CPacket>&>::iterator it;
 		it = m_mapAck.find(pack.hEvent);
 		if (it!=m_mapAck.end())
 		{
-			std::list<CPacket>::iterator i; 
-			i = it->second.begin();
-			while (i!=it->second.end())
-			{
-				lstpacks.push_back(*i);
-				i++;
-			}
 			m_mapAck.erase(it);
 			return true;
 		}
@@ -297,9 +290,12 @@ public:
 	}
 
 	void CloseClient() {
-		closesocket(m_sock);
-		m_sock = INVALID_SOCKET;
-		Clearbuffer();
+		if (m_sock != INVALID_SOCKET)
+		{
+			closesocket(m_sock);
+			m_sock = INVALID_SOCKET;
+			Clearbuffer();
+		}
 		// WSACleanup();
 	}
 
@@ -323,8 +319,8 @@ protected:
 
 private:
 	std::list<CPacket> m_lstSend;
-	std::map<HANDLE, std::list<CPacket>> m_mapAck;
-
+	std::map<HANDLE, std::list<CPacket>&> m_mapAck;
+	std::map<HANDLE, bool> m_mapAutoClosed;
 
 	std::vector<char> m_buffer;
 	int m_index;

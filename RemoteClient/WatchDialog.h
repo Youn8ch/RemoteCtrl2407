@@ -15,6 +15,7 @@ public:
 public:
 	int m_nObjWidth;
 	int m_nObjHeight;
+	CImage m_image; // 缓存
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_DIALOG_WATCH };
@@ -26,6 +27,10 @@ public:
 	bool isFull() const {
 		return m_isfull;
 	}
+	CImage& GetImage() {
+		return m_image;
+	}
+
 protected:
 	bool m_isfull; // true 有， false 无
 
@@ -52,4 +57,5 @@ public:
 	virtual void OnOK();
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
+
 };

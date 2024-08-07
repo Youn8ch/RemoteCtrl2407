@@ -122,7 +122,7 @@ public:
 	}
 	bool Send(CPacket& pack) {
 		if (m_client == -1) return false;
-		CTool::Dump((BYTE*)pack.getData(), pack.getSize());
+		// CTool::Dump((BYTE*)pack.getData(), pack.getSize());
 		return send(m_client, (const char*)pack.getData(), pack.getSize(), 0) > 0;
 	}
 
