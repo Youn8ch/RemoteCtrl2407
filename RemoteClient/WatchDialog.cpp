@@ -54,6 +54,11 @@ CPoint CWatchDialog::UserPoint2RemoteScreenPoint(CPoint& point,bool isScreen)
 	CPoint cur = point;
 	CRect clientRect;
 	if (isScreen) ScreenToClient(&point); // 全局坐标到客户区域坐标
+	else
+	{
+		ClientToScreen(&point);
+		m_picture.ScreenToClient(&point);
+	}
 	m_picture.GetWindowRect(clientRect);
 	return CPoint(point.x * m_nObjWidth / clientRect.Width(), point.y * m_nObjHeight / clientRect.Height());
 }

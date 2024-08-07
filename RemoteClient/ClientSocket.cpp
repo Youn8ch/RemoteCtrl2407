@@ -94,7 +94,7 @@ void CClientSocket::threadFunc()
 		} while (itclosed->second == false || index > 0);
 		SetEvent(head.hEvent);
 		m_lock.lock();
-		m_mapAutoClosed.erase(itclosed);
+		if (itclosed!=m_mapAutoClosed.end()) m_mapAutoClosed.erase(itclosed);
 		m_lstSend.pop_front();
 		m_lock.unlock();
 		CloseClient();
