@@ -13,7 +13,7 @@ class CPacket
 {
 public:
 	CPacket() : sHead(0), nLength(0), sCmd(0), sSum(0) {}
-	CPacket(WORD nCmd, const BYTE* pdata, size_t nsize,HANDLE nevent) {
+	CPacket(WORD nCmd, const BYTE* pdata, size_t nsize) {
 		sHead = 0xFEFF;
 		nLength = (unsigned long)(nsize + 4);
 		sCmd = nCmd;
@@ -31,7 +31,6 @@ public:
 		{
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
-		this->hEvent = nevent;
 	}
 	CPacket(const CPacket& pack) {
 		sHead = pack.sHead;
@@ -39,13 +38,12 @@ public:
 		sCmd = pack.sCmd;
 		strData = pack.strData;
 		sSum = pack.sSum;
-		hEvent = pack.hEvent;
 	}
 	CPacket(const BYTE* pdata, size_t& nsize) : sHead(0),
 		nLength(0),
 		sCmd(0),
-		sSum(0),
-		hEvent(INVALID_HANDLE_VALUE){
+		sSum(0)
+	{
 		size_t i = 0;
 		for (; i < nsize; i++)
 		{
@@ -98,7 +96,6 @@ public:
 			sCmd = pack.sCmd;
 			strData = pack.strData;
 			sSum = pack.sSum;
-			hEvent = pack.hEvent;
 		}
 		return *this;
 	}
@@ -125,8 +122,7 @@ public:
 	WORD sCmd; // 控制命令
 	std::string strData; // 包数据
 	WORD sSum; // 和校验
-	// std::string strOut; // 整个包的数据
-	HANDLE hEvent;
+
 
 };
 
@@ -171,9 +167,36 @@ typedef struct file_info {
 
 
 
+#define WM_SEND_PACK (WM_USER+1)  // 发送包数据
+#define WM_SEND_PACK_ACK (WM_USER+2)  // 发送包数据应答
 
 
+enum MyEnum
+{
+	CSM_AUTOCLOSE = 1,// CSM Client Socket Mode 自动关闭模式
+};
 
+typedef struct PacketData {
+	std::string strData;
+	UINT nMode;
+	PacketData(const char* pData, size_t nLen, UINT mode) {
+		strData.resize(nLen);
+		memcpy((char*)strData.c_str(), pData, nLen);
+		nMode = mode;
+	}
+	PacketData(const PacketData& data) {
+		strData = data.strData;
+		nMode = data.nMode;
+	}
+	PacketData& operator=(const PacketData& data) {
+		if (this != &data)
+		{
+			strData = data.strData;
+			nMode = data.nMode;
+		}
+		return *this;
+	}
+}PACKET_DATA;
 
 std::string NEWGetErrorInfo(int wsaErrcode);
 
@@ -248,32 +271,46 @@ public:
 			return m_packet.sCmd;
 		}
 	}
-	bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks,bool isAutoClosed = true) {
-		m_lock.lock();
-		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent,lstpacks));
-		m_mapAutoClosed.insert(std::pair < HANDLE, bool>(pack.hEvent, isAutoClosed));
-		m_lstSend.push_back(pack);
-		m_lock.unlock();
-		while (!(m_sock == INVALID_SOCKET && m_hThread == INVALID_HANDLE_VALUE))
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true) {
+		if (m_hThread == INVALID_HANDLE_VALUE)
 		{
-			Sleep(1);
-		} 
-		m_hThread = (HANDLE)_beginthread(&CClientSocket::threadEntry, 0, this);
-		TRACE(" Thread : %d \r\n", m_hThread);
-		WaitForSingleObject(pack.hEvent, INFINITE);
-		// CloseHandle(pack.hEvent); // 回收事件句柄
-		std::map<HANDLE, std::list<CPacket>&>::iterator it;
-		m_lock.lock();
-		it = m_mapAck.find(pack.hEvent);
-		if (it != m_mapAck.end())
-		{
-			m_mapAck.erase(it);
-			m_lock.unlock();
-			return true;
+			m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_Threadid);
 		}
-		m_lock.unlock();
-		return false;
+		UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
+		std::string strOut;
+		pack.getData(strOut);
+		return PostThreadMessage(m_Threadid, WM_SEND_PACK,
+			(WPARAM)new PACKET_DATA(strOut.c_str(), strOut.size(), nMode), (LPARAM)hWnd);
 	}
+
+	//bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks,bool isAutoClosed = true) {
+	//	m_lock.lock();
+	//	auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent,lstpacks));
+	//	m_mapAutoClosed.insert(std::pair < HANDLE, bool>(pack.hEvent, isAutoClosed));
+	//	m_lstSend.push_back(pack);
+	//	m_lock.unlock();
+	//	while (!(m_sock == INVALID_SOCKET && m_hThread == INVALID_HANDLE_VALUE))
+	//	{
+	//		Sleep(1);
+	//	} 
+	//	m_hThread = (HANDLE)_beginthread(&CClientSocket::threadEntry, 0, this);
+	//	TRACE(" Thread : %d \r\n", m_hThread);
+
+
+	//	WaitForSingleObject(pack.hEvent, INFINITE);
+	//	// CloseHandle(pack.hEvent); // 回收事件句柄
+	//	std::map<HANDLE, std::list<CPacket>&>::iterator it;
+	//	m_lock.lock();
+	//	it = m_mapAck.find(pack.hEvent);
+	//	if (it != m_mapAck.end())
+	//	{
+	//		m_mapAck.erase(it);
+	//		m_lock.unlock();
+	//		return true;
+	//	}
+	//	m_lock.unlock();
+	//	return false;
+	//}
 
 	bool GetFilePath(std::string& path) {
 		if (m_packet.sCmd >= 2 && m_packet.sCmd <= 4)
@@ -321,9 +358,24 @@ public:
 	}
 
 public:
-	static void threadEntry(void* arg);
+	static unsigned __stdcall threadEntry(void* arg);
 protected:
-	void threadFunc();
+	// void threadFunc();
+
+public:
+	void threadFunc2();
+	unsigned m_Threadid;
+
+	// wParam 缓冲区的值
+	// lParam 缓冲区长度
+	void SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam);
+
+private:
+
+	// wParam 缓冲区的值
+	// lParam 缓冲区长度
+	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam /*缓冲区的值*/, LPARAM lParam /*缓冲区长度*/);
+	std::map<UINT, MSGFUNC> m_mapFunc;
 
 private:
 
@@ -352,6 +404,11 @@ private:
 		m_sock = ss.m_sock;
 		m_index = ss.m_index;
 		memcpy(&m_buffer, &ss.m_buffer, m_index);
+		std::map<UINT, CClientSocket::MSGFUNC>::const_iterator it = ss.m_mapFunc.begin();
+		for (; it != ss.m_mapFunc.end(); it++)
+		{
+			m_mapFunc.insert(std::pair<UINT,MSGFUNC>(it->first,it->second));
+		}
 	}
 	CClientSocket() :
 		m_sock(INVALID_SOCKET),
@@ -363,6 +420,22 @@ private:
 			LOGE("初始化网络环境失败");
 		}
 		m_buffer.resize(BUFFER_SIZE);
+		
+		struct
+		{
+			UINT message;
+			MSGFUNC func;
+		}funcs[] = {
+			{WM_SEND_PACK,&CClientSocket::SendPack},
+			{0,NULL}
+		};
+		for (int i = 0; funcs[i].message != 0; i++)
+		{
+			if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].message, funcs[i].func)).second == false) {
+				TRACE(" SOCKET MAPFUNC insert failed \r\n");
+			}
+		}
+
 	}
 	~CClientSocket() {
 		closesocket(m_sock);

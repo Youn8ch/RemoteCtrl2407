@@ -134,7 +134,8 @@ void CClientController::ThreadWatchScreen()
 	{
 		if (m_watchDlg.isFull() == false) {
 			std::list<CPacket> lstPacks;
-			int ret = SendCommandPacket(6, &lstPacks);
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, NULL,0);
+			// TODO 消息响应函数 控制发送频率
 			if (ret == 6)
 			{
 				if (CTool::Bytes2Image(m_watchDlg.GetImage(), lstPacks.front().strData)==0)
@@ -171,7 +172,7 @@ void CClientController::ThreadDownLoadFile()
 	do
 	{
 		CClientSocket* pClient = CClientSocket::getInstance();
-		int ret = SendCommandPacket(4, NULL,false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		int ret = SendCommandPacket(m_remoteDlg,4,false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
 		if (ret < 0)
 		{
 			AfxMessageBox("执行下载文件失败");
