@@ -468,13 +468,13 @@ void CRemoteClientDlg::OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pR
 
 LRESULT CRemoteClientDlg::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 {
+	CPacket* pPacket = (CPacket*)wParam;
 	if (lParam == -1 || lParam == -2 || lParam == 1)
 	{
 		// TODO 错误处理
 	}
 	if (lParam == 0)
 	{
-		CPacket* pPacket = (CPacket*)wParam;
 		if (pPacket != NULL)
 		{
 			switch (pPacket->sCmd) {
@@ -570,7 +570,6 @@ LRESULT CRemoteClientDlg::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 	{
 		// TODO
 	}
-
-
+	if (pPacket != NULL) delete pPacket;
 	return LRESULT();
 }

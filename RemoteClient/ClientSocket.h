@@ -278,15 +278,12 @@ public:
 		}
 	}
 	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true,WPARAM wParam = 0) {
-		if (m_hThread == INVALID_HANDLE_VALUE)
-		{
-			m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_Threadid);
-		}
 		UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
 		std::string strOut;
 		pack.getData(strOut);
-		return PostThreadMessage(m_Threadid, WM_SEND_PACK,
+		bool ret = PostThreadMessage(m_Threadid, WM_SEND_PACK,
 			(WPARAM)new PACKET_DATA(strOut.c_str(), strOut.size(), nMode,wParam), (LPARAM)hWnd);
+		return ret;
 	}
 
 	//bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks,bool isAutoClosed = true) {
@@ -384,7 +381,7 @@ private:
 	std::map<UINT, MSGFUNC> m_mapFunc;
 
 private:
-
+	HANDLE m_eventInvoke; // 启动事件
 	HANDLE m_hThread;
 	std::mutex m_lock;
 	std::list<CPacket> m_lstSend;
@@ -426,7 +423,14 @@ private:
 			LOGE("初始化网络环境失败");
 		}
 		m_buffer.resize(BUFFER_SIZE);
-		
+		m_eventInvoke = CreateEvent(NULL, TRUE, FALSE, NULL);
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_Threadid);
+		if (WaitForSingleObject(m_eventInvoke,100) == WAIT_TIMEOUT)
+		{
+			TRACE("网络消息处理线程启动失败 \r\n");
+		}
+		CloseHandle(m_eventInvoke);
+
 		struct
 		{
 			UINT message;

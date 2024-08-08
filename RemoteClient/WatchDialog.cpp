@@ -107,13 +107,13 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 
 LRESULT CWatchDialog::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 {
+	CPacket* pPacket = (CPacket*)wParam;
 	if (lParam == -1 || lParam == -2 || lParam == 1)
 	{
 		// TODO 错误处理
 	}
 	if (lParam == 0)
 	{
-		CPacket* pPacket = (CPacket*)wParam;
 		if (pPacket != NULL)
 		{
 			switch (pPacket->sCmd) {
@@ -148,6 +148,7 @@ LRESULT CWatchDialog::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 			}
 		}
 	}
+	if (pPacket!=NULL) delete pPacket;
 	return LRESULT();
 }
 

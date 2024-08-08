@@ -106,11 +106,13 @@ unsigned CClientSocket::threadEntry(void* arg)
 
 void CClientSocket::threadFunc2()
 {
+	SetEvent(m_eventInvoke);
 	MSG msg;
 	while (::GetMessage(&msg,NULL,0,0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
+		TRACE(" GET MESSAGE : %08X \r\n", msg.message);
 		if (m_mapFunc.find(msg.message)!= m_mapFunc.end())
 		{
 			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);
