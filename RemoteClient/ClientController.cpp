@@ -172,7 +172,7 @@ void CClientController::ThreadDownLoadFile()
 	do
 	{
 		CClientSocket* pClient = CClientSocket::getInstance();
-		int ret = SendCommandPacket(m_remoteDlg,4,false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength());
+		int ret = SendCommandPacket(m_remoteDlg,4,false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(),(WPARAM)pFile);
 		if (ret < 0)
 		{
 			AfxMessageBox("执行下载文件失败");

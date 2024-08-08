@@ -87,6 +87,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_EN_CHANGE(IDC_EDIT_PORT2, &CRemoteClientDlg::OnEnChangeEditPort2)
 	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS_SERV, &CRemoteClientDlg::OnIpnFieldchangedIpaddressServ)
+	ON_MESSAGE(WM_SEND_PACK_ACK, &CRemoteClientDlg::OnSendPacketACK)
 END_MESSAGE_MAP()
 
 
@@ -198,29 +199,11 @@ void CRemoteClientDlg::OnBnClickedButtonFile()
 {
 	std::list<CPacket> lstPackets;
 	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1);
-	if (ret < 0)
+	if (ret == 0)
 	{
 		AfxMessageBox(_T("ButtonFile命令处理失败"));
 		return;
 	}
-	std::string drivers = lstPackets.front().strData;
-	std::string dr;
-	m_Tree.DeleteAllItems();
-	for (size_t i = 0; i < drivers.size(); i++)
-	{
-		if (drivers[i] == ',') {
-			dr += ":";
-			HTREEITEM htemp = m_Tree.InsertItem(dr.c_str(),TVI_ROOT,TVI_LAST);
-			m_Tree.InsertItem("", htemp, TVI_LAST);
-			dr.clear();
-			continue;
-		}
-		dr += drivers[i];
-	}
-	dr += ":";
-	HTREEITEM htemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-	m_Tree.InsertItem("", htemp, TVI_LAST);
-
 }
 
 
@@ -240,7 +223,7 @@ void CRemoteClientDlg::LoadFileInfo()
 
 	std::list<CPacket> lstPackets;
 	int ncmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),
-		2,false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+		2,false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),(WPARAM)hTreeSelected);
 	if (lstPackets.size()>0)
 	{
 		std::list<CPacket>::iterator it = lstPackets.begin();
@@ -481,4 +464,113 @@ void CRemoteClientDlg::OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pR
 	UpdateData();
 	CClientController::getInstance()->UpdateAddress(
 		m_server_address, atoi((LPCTSTR)m_nPort));
+}
+
+LRESULT CRemoteClientDlg::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
+{
+	if (lParam == -1 || lParam == -2 || lParam == 1)
+	{
+		// TODO 错误处理
+	}
+	if (lParam == 0)
+	{
+		CPacket* pPacket = (CPacket*)wParam;
+		if (pPacket != NULL)
+		{
+			switch (pPacket->sCmd) {
+			case 1: // 获取驱动信息
+			{
+				std::string drivers = pPacket->strData;
+				std::string dr;
+				m_Tree.DeleteAllItems();
+				for (size_t i = 0; i < drivers.size(); i++)
+				{
+					if (drivers[i] == ',') {
+						dr += ":";
+						HTREEITEM htemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+						m_Tree.InsertItem("", htemp, TVI_LAST);
+						dr.clear();
+						continue;
+					}
+					dr += drivers[i];
+				}
+				dr += ":";
+				HTREEITEM htemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+				m_Tree.InsertItem("", htemp, TVI_LAST);
+
+
+				break;
+			}
+			case 2: // 获取文件信息
+			{
+				PFILEINFO pInfo = (PFILEINFO)pPacket->strData.c_str();
+				if (pInfo->HasNext == FALSE) break;
+				if (pInfo->IsDirectory) {
+					if (CString(pInfo->szFileName) == "." || CString(pInfo->szFileName) == "..") {
+						break;
+					}
+					HTREEITEM htemp = m_Tree.InsertItem(pInfo->szFileName, (HTREEITEM)lParam, TVI_LAST);
+					m_Tree.InsertItem("", htemp, TVI_LAST);
+				}
+				else
+				{
+					m_List.InsertItem(0, pInfo->szFileName);
+				}
+				break;
+			}
+			case 3:
+			{
+				TRACE(" Run File Done! \r\n");
+				break;
+			}
+			case 4:
+			{
+				static LONGLONG length = 0, index = 0;
+				if (length == 0)
+				{
+					*(long long*)pPacket->strData.c_str();
+					if (length == 0)
+					{
+						AfxMessageBox("文件长度为0 或无法读取");
+						CClientController::getInstance()->DownFileEnd();
+					}
+				}
+				else if (length >0 && index>=length)
+				{
+					fclose((FILE*)lParam);
+					length = 0;
+					index = 0;
+					CClientController::getInstance()->DownFileEnd();
+				}
+				else
+				{
+					FILE* pFile = (FILE*)lParam;
+					fwrite(pPacket->strData.c_str(), 1, pPacket->strData.size(), pFile);
+					index += pPacket->strData.size();
+				}
+				break;
+			}
+			case 9:
+			{
+				TRACE(" Delete File Done! \r\n");
+				break;
+			}
+			case 666:
+			{
+				TRACE(" Test connect! \r\n");
+				break;
+			}
+			default:
+				TRACE(" Unknown cmd = %d Received! \r\n", pPacket->sCmd);
+				break;
+			}
+		}
+	}
+	else if (lParam<0)
+	{
+		// TODO
+	}
+
+
+	return LRESULT();
 }

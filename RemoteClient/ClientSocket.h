@@ -6,6 +6,12 @@
 #include <map>
 #include <list>
 #include <mutex>
+
+#define WM_SEND_PACK (WM_USER+1)  // 发送包数据
+#define WM_SEND_PACK_ACK (WM_USER+2)  // 发送包数据应答
+
+
+
 #pragma pack(push)
 #pragma pack(1)
 
@@ -167,10 +173,6 @@ typedef struct file_info {
 
 
 
-#define WM_SEND_PACK (WM_USER+1)  // 发送包数据
-#define WM_SEND_PACK_ACK (WM_USER+2)  // 发送包数据应答
-
-
 enum MyEnum
 {
 	CSM_AUTOCLOSE = 1,// CSM Client Socket Mode 自动关闭模式
@@ -179,20 +181,24 @@ enum MyEnum
 typedef struct PacketData {
 	std::string strData;
 	UINT nMode;
-	PacketData(const char* pData, size_t nLen, UINT mode) {
+	WPARAM wParam;
+	PacketData(const char* pData, size_t nLen, UINT mode, WPARAM nParam=0) {
 		strData.resize(nLen);
 		memcpy((char*)strData.c_str(), pData, nLen);
 		nMode = mode;
+		wParam = nParam;
 	}
 	PacketData(const PacketData& data) {
 		strData = data.strData;
 		nMode = data.nMode;
+		wParam = data.wParam;
 	}
 	PacketData& operator=(const PacketData& data) {
 		if (this != &data)
 		{
 			strData = data.strData;
 			nMode = data.nMode;
+			wParam = data.wParam;
 		}
 		return *this;
 	}
@@ -271,7 +277,7 @@ public:
 			return m_packet.sCmd;
 		}
 	}
-	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true) {
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true,WPARAM wParam = 0) {
 		if (m_hThread == INVALID_HANDLE_VALUE)
 		{
 			m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_Threadid);
@@ -280,7 +286,7 @@ public:
 		std::string strOut;
 		pack.getData(strOut);
 		return PostThreadMessage(m_Threadid, WM_SEND_PACK,
-			(WPARAM)new PACKET_DATA(strOut.c_str(), strOut.size(), nMode), (LPARAM)hWnd);
+			(WPARAM)new PACKET_DATA(strOut.c_str(), strOut.size(), nMode,wParam), (LPARAM)hWnd);
 	}
 
 	//bool SendPacket (const CPacket& pack,std::list<CPacket>& lstpacks,bool isAutoClosed = true) {

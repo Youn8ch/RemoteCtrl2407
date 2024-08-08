@@ -45,10 +45,11 @@ public:
 		int nCmd,
 		bool bAutoclose = true, 
 		BYTE* pData = NULL, 
-		size_t nLength = 0) 
+		size_t nLength = 0,
+		WPARAM wParam =0) 
 	{
 		CClientSocket* pClient = CClientSocket::getInstance();
-		return pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoclose);
+		return pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoclose, wParam);
 	}
 
 	int GetImage(CImage& image) {
@@ -60,13 +61,22 @@ public:
 
 		CFileDialog dlg(FALSE, "*", path,
 			OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, NULL, &m_remoteDlg);
+
+
+
 		if (dlg.DoModal() == IDOK) {
 			m_strRemote = path;
 			m_strLocal = dlg.GetPathName();
-
-			m_hThreadDownload = (HANDLE)_beginthread(&CClientController::ThreadEntryDownLoadFile, 0, this);
-			if (WaitForSingleObject(m_hThreadDownload,0) != WAIT_TIMEOUT) return -1;
-
+			FILE* pFile = fopen(m_strLocal, "wb+");
+			if (pFile == NULL)
+			{
+				AfxMessageBox("没有权限保存 或 文件无法创建");
+				return -1;
+			}
+			SendCommandPacket(m_remoteDlg, 4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(), (WPARAM)pFile);
+			/*m_hThreadDownload = (HANDLE)_beginthread(&CClientController::ThreadEntryDownLoadFile, 0, this);
+			if (WaitForSingleObject(m_hThreadDownload,0) != WAIT_TIMEOUT) return -1;*/
+		
 
 			m_remoteDlg.BeginWaitCursor();
 			m_statusDlg.m_info.SetWindowText(_T("执行中..."));
@@ -78,6 +88,12 @@ public:
 		}
 		return 0;
 	}
+	void DownFileEnd() {
+		m_statusDlg.ShowWindow(SW_HIDE);
+		m_remoteDlg.EndWaitCursor();
+		m_remoteDlg.MessageBox("传输成功");
+	}
+
 
 	void StartWatchScreen() {
 		m_isClosed = false;

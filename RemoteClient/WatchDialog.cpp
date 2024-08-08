@@ -43,6 +43,7 @@ BEGIN_MESSAGE_MAP(CWatchDialog, CDialog)
 	ON_WM_RBUTTONUP()
 	ON_BN_CLICKED(IDC_BTN_LOCK, &CWatchDialog::OnBnClickedBtnLock)
 	ON_BN_CLICKED(IDC_BTN_UNLOCK, &CWatchDialog::OnBnClickedBtnUnlock)
+	ON_MESSAGE(WM_SEND_PACK_ACK, &CWatchDialog::OnSendPacketACK)
 END_MESSAGE_MAP()
 
 
@@ -68,7 +69,7 @@ BOOL CWatchDialog::OnInitDialog()
 	CDialog::OnInitDialog();
 
 	// TODO:  在此添加额外的初始化
-	SetTimer(0, 30, NULL);
+	// SetTimer(0, 30, NULL);
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// 异常: OCX 属性页应返回 FALSE
 }
@@ -77,32 +78,78 @@ BOOL CWatchDialog::OnInitDialog()
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	if (nIDEvent == 0)
-	{
+	//if (nIDEvent == 0)
+	//{
 
-		CClientController* pParent = CClientController::getInstance();
-		if (m_isfull)
-		{	
-			// std::lock_guard<std::mutex> lock(pParent->m_imageMutex);
+	//	CClientController* pParent = CClientController::getInstance();
+	//	if (m_isfull)
+	//	{	
+	//		// std::lock_guard<std::mutex> lock(pParent->m_imageMutex);
 
-			CRect rect;
-			m_picture.GetWindowRect(rect);
-			do
-			{
-				if (m_image == NULL) break;
-				m_nObjWidth = m_image.GetWidth();
-				m_nObjHeight = m_image.GetHeight();
-				m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
-			} while (false);
-			m_picture.InvalidateRect(NULL);
-			m_image.Destroy();
-			m_isfull = false;
-			//
-		}
-	}
+	//		CRect rect;
+	//		m_picture.GetWindowRect(rect);
+	//		do
+	//		{
+	//			if (m_image == NULL) break;
+	//			m_nObjWidth = m_image.GetWidth();
+	//			m_nObjHeight = m_image.GetHeight();
+	//			m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+	//		} while (false);
+	//		m_picture.InvalidateRect(NULL);
+	//		m_image.Destroy();
+	//		m_isfull = false;
+	//		//
+	//	}
+	//}
 	CDialog::OnTimer(nIDEvent);
 }
 
+
+LRESULT CWatchDialog::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
+{
+	if (lParam == -1 || lParam == -2 || lParam == 1)
+	{
+		// TODO 错误处理
+	}
+	if (lParam == 0)
+	{
+		CPacket* pPacket = (CPacket*)wParam;
+		if (pPacket != NULL)
+		{
+			switch (pPacket->sCmd) {
+			case 6:
+			{
+				if(m_isfull)
+				{
+					CTool::Bytes2Image(m_image, pPacket->strData);
+					CRect rect;
+					m_picture.GetWindowRect(rect);
+					do
+					{
+						if (m_image == NULL) break;
+						m_nObjWidth = m_image.GetWidth();
+						m_nObjHeight = m_image.GetHeight();
+						m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+					} while (false);
+					m_picture.InvalidateRect(NULL);
+					m_image.Destroy();
+					m_isfull = false;
+				}
+				break;
+			}
+			case 5:
+				break;
+			case 7:
+				break;
+			case 8:
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	return LRESULT();
+}
 
 void CWatchDialog::OnLButtonDblClk(UINT nFlags, CPoint point)
 {
