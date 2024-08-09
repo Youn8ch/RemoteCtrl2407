@@ -50,8 +50,9 @@ public:
 
 public:
 	std::mutex m_imageMutex;	
-private:
 	void LoadFileInfo();
+private:
+	// void LoadFileInfo();
 	void LoadFileCurInfo();
 	// 后缀没带"\\"
 	CString GetTreePath(HTREEITEM hTree);

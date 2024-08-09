@@ -153,9 +153,10 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 							CloseClient();
 							return;
 						}
+						index -= nlen;
+						memmove(pBuffer, pBuffer + nlen, index);
+
 					}
-					memmove(pBuffer, pBuffer + nlen, index - nlen);
-					index -= nlen;
 				}
 				else
 				{
