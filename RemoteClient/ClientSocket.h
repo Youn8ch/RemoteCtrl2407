@@ -281,8 +281,13 @@ public:
 		UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
 		std::string strOut;
 		pack.getData(strOut);
+		PACKET_DATA* pData = new PACKET_DATA(strOut.c_str(), strOut.size(), nMode, wParam);
 		bool ret = PostThreadMessage(m_Threadid, WM_SEND_PACK,
-			(WPARAM)new PACKET_DATA(strOut.c_str(), strOut.size(), nMode,wParam), (LPARAM)hWnd);
+			(WPARAM)pData, (LPARAM)hWnd);
+		if (!ret)
+		{
+			delete pData;
+		}
 		return ret;
 	}
 

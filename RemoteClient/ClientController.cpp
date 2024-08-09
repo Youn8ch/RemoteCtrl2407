@@ -130,24 +130,22 @@ void CClientController::ThreadEntryWatchScreen(void* arg)
 void CClientController::ThreadWatchScreen()
 {
 	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
 	while (!m_isClosed)
 	{
-		if (m_watchDlg.isFull() == false) {
-			std::list<CPacket> lstPacks;
-			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, NULL,0);
-			// TODO 消息响应函数 控制发送频率
-			if (ret == 6)
-			{
-				if (CTool::Bytes2Image(m_watchDlg.GetImage(), lstPacks.front().strData)==0)
-				{
-					m_watchDlg.SetImgStatus(true);
-				}
-				else
-				{
-					TRACE(_T(" 获取图片失败 ret = %d \r\n",ret));
-				}
-			}
+		
+		if (GetTickCount64() - nTick <200)
+		{
+			Sleep(200+ nTick - GetTickCount64());
 		}
+		nTick = GetTickCount64();
+		int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, NULL,0);
+		// TODO 消息响应函数 控制发送频率
+		if (!ret)
+		{
+			TRACE(_T(" 获取图片失败 ret = %d \r\n", ret));
+		}
+
 		Sleep(1);
 	}
 }

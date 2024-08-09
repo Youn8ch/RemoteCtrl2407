@@ -119,22 +119,18 @@ LRESULT CWatchDialog::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 			switch (pPacket->sCmd) {
 			case 6:
 			{
-				if(m_isfull)
+				CTool::Bytes2Image(m_image, pPacket->strData);
+				CRect rect;
+				m_picture.GetWindowRect(rect);
+				do
 				{
-					CTool::Bytes2Image(m_image, pPacket->strData);
-					CRect rect;
-					m_picture.GetWindowRect(rect);
-					do
-					{
-						if (m_image == NULL) break;
-						m_nObjWidth = m_image.GetWidth();
-						m_nObjHeight = m_image.GetHeight();
-						m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
-					} while (false);
-					m_picture.InvalidateRect(NULL);
-					m_image.Destroy();
-					m_isfull = false;
-				}
+					if (m_image == NULL) break;
+					m_nObjWidth = m_image.GetWidth();
+					m_nObjHeight = m_image.GetHeight();
+					m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+				} while (false);
+				m_picture.InvalidateRect(NULL);
+				m_image.Destroy();
 				break;
 			}
 			case 5:
