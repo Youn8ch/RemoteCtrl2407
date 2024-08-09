@@ -18,7 +18,6 @@ public:
 	static CClientController* getInstance();
 	int InitController();
 	int Invoke(CWnd*& pMainWnd);
-	LRESULT SendMessage(MSG msg);
 	void UpdateAddress(int ip, int port) {
 		CClientSocket::getInstance()->UpdateAddress(ip, port);
 	}
@@ -74,10 +73,6 @@ public:
 				return -1;
 			}
 			SendCommandPacket(m_remoteDlg, 4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(), (WPARAM)pFile);
-			/*m_hThreadDownload = (HANDLE)_beginthread(&CClientController::ThreadEntryDownLoadFile, 0, this);
-			if (WaitForSingleObject(m_hThreadDownload,0) != WAIT_TIMEOUT) return -1;*/
-		
-
 			m_remoteDlg.BeginWaitCursor();
 			m_statusDlg.m_info.SetWindowText(_T("Ö´ÐÐÖÐ..."));
 			m_statusDlg.ShowWindow(SW_SHOW);
@@ -137,9 +132,6 @@ protected:
 protected:
 	static void ThreadEntryWatchScreen(void* arg);
 	void ThreadWatchScreen();
-
-	static void ThreadEntryDownLoadFile(void* arg);
-	void ThreadDownLoadFile();
 
 private:
 

@@ -15,6 +15,9 @@
 #include "WatchDialog.h"
 
 
+
+
+
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
 class CAboutDlg : public CDialogEx
@@ -230,24 +233,96 @@ void CRemoteClientDlg::LoadFileCurInfo()
 	CString strPath = GetTreePath(hTreeSelected);
 	if (hTreeSelected == NULL) return;
 	m_List.DeleteAllItems();
-	int ncmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
-	
-	CClientController* pCtrl = CClientController::getInstance();
-	
-	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-	while (pInfo->HasNext) {
-		TRACE("[%s] is dir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-		if (!(pInfo->IsDirectory))
-		{
-			m_List.InsertItem(0, pInfo->szFileName);
-		}
-		int cmd = pCtrl->DealCommand();
-		TRACE("DIR ack : %d\r\n", cmd);
-		if (cmd < 0) break;
-		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-	}
-	// pCtrl->CloseSocket();
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 
+}
+
+void CRemoteClientDlg::Str2Tree(const std::string& drivers, CTreeCtrl& tree)
+{
+	std::string dr;
+	tree.DeleteAllItems();
+	for (size_t i = 0; i < drivers.size(); i++)
+	{
+		if (drivers[i] == ',') {
+			dr += ":";
+			HTREEITEM htemp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			tree.InsertItem("", htemp, TVI_LAST);
+			dr.clear();
+			continue;
+		}
+		dr += drivers[i];
+	}
+	dr += ":";
+	HTREEITEM htemp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+	tree.InsertItem("", htemp, TVI_LAST);
+}
+
+void CRemoteClientDlg::UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent)
+{
+	if (finfo.HasNext == FALSE) return;
+	if (finfo.IsDirectory) {
+		if (CString(finfo.szFileName) == "." || CString(finfo.szFileName) == "..") {
+			return;
+		}
+		HTREEITEM htemp = m_Tree.InsertItem(finfo.szFileName, hParent, TVI_LAST);
+		m_Tree.InsertItem("", htemp, TVI_LAST);
+	}
+	else
+	{
+		m_List.InsertItem(0, finfo.szFileName);
+	}
+	m_Tree.Expand(hParent, TVE_EXPAND);
+}
+
+
+
+//void CRemoteClientDlg::UpdataFileInfo(const FILEINFO& finfo, HTREEITEM hParent)
+//{
+//	if (finfo.HasNext == FALSE) return;
+//	if (finfo.IsDirectory) {
+//		if (CString(finfo.szFileName) == "." || CString(finfo.szFileName) == "..") {
+//			return;
+//		}
+//		HTREEITEM htemp = m_Tree.InsertItem(finfo.szFileName, hParent, TVI_LAST);
+//		m_Tree.InsertItem("", htemp, TVI_LAST);
+//	}
+//	else
+//	{
+//		m_List.InsertItem(0, finfo.szFileName);
+//	}
+//	m_Tree.Expand(hParent, TVE_EXPAND);
+//}
+
+void CRemoteClientDlg::UpdataDownloadFile(const std::string& strData, FILE* pFILE)
+{
+	static LONGLONG length = 0, index = 0;
+	if (length == 0)
+	{
+		length = *(long long*)strData.c_str();
+		if (length == 0)
+		{
+			AfxMessageBox("文件长度为0 或无法读取");
+			CClientController::getInstance()->DownFileEnd();
+		}
+	}
+	else if (length > 0 && index >= length)
+	{
+		fclose(pFILE);
+		length = 0;
+		index = 0;
+		CClientController::getInstance()->DownFileEnd();
+	}
+	else
+	{
+		fwrite(strData.c_str(), 1, strData.size(), pFILE);
+		index += strData.size();
+		if (index >= length) {
+			fclose(pFILE);
+			length = 0;
+			index = 0;
+			CClientController::getInstance()->DownFileEnd();
+		}
+	}
 
 }
 
@@ -454,45 +529,14 @@ LRESULT CRemoteClientDlg::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 		switch (pPacket->sCmd) {
 		case 1: // 获取驱动信息
 		{
-			std::string drivers = pPacket->strData;
-			std::string dr;
-			m_Tree.DeleteAllItems();
-			for (size_t i = 0; i < drivers.size(); i++)
-			{
-				if (drivers[i] == ',') {
-					dr += ":";
-					HTREEITEM htemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-					m_Tree.InsertItem("", htemp, TVI_LAST);
-					dr.clear();
-					continue;
-				}
-				dr += drivers[i];
-			}
-			dr += ":";
-			HTREEITEM htemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-			m_Tree.InsertItem("", htemp, TVI_LAST);
-
-
+			Str2Tree(pPacket->strData, m_Tree);
 			break;
 		}
 		case 2: // 获取文件信息
 		{
-			TRACE("123");
+			PFILEINFO Info = (PFILEINFO)pPacket->strData.c_str();
+			UpdateFileInfo(*Info,(HTREEITEM)lParam);
 
-			PFILEINFO pInfo = (PFILEINFO)pPacket->strData.c_str();
-			if (pInfo->HasNext == FALSE) break;
-			if (pInfo->IsDirectory) {
-				if (CString(pInfo->szFileName) == "." || CString(pInfo->szFileName) == "..") {
-					break;
-				}
-				HTREEITEM htemp = m_Tree.InsertItem(pInfo->szFileName, (HTREEITEM)lParam, TVI_LAST);
-				m_Tree.InsertItem("", htemp, TVI_LAST);
-			}
-			else
-			{
-				m_List.InsertItem(0, pInfo->szFileName);
-			}
-			m_Tree.Expand((HTREEITEM)lParam, TVE_EXPAND);
 			break;
 		}
 		case 3:
@@ -502,35 +546,7 @@ LRESULT CRemoteClientDlg::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 		}
 		case 4:
 		{
-			static LONGLONG length = 0, index = 0;
-			if (length == 0)
-			{
-				length = *(long long*)pPacket->strData.c_str();
-				if (length == 0)
-				{
-					AfxMessageBox("文件长度为0 或无法读取");
-					CClientController::getInstance()->DownFileEnd();
-				}
-			}
-			else if (length >0 && index>=length)
-			{
-				fclose((FILE*)lParam);
-				length = 0;
-				index = 0;
-				CClientController::getInstance()->DownFileEnd();
-			}
-			else
-			{
-				FILE* pFile = (FILE*)lParam;
-				fwrite(pPacket->strData.c_str(), 1, pPacket->strData.size(), pFile);
-				index += pPacket->strData.size();
-				if (index >= length) {
-					fclose((FILE*)lParam);
-					length = 0;
-					index = 0;
-					CClientController::getInstance()->DownFileEnd();
-				}
-			}
+			UpdataDownloadFile(pPacket->strData.c_str(), (FILE*)lParam);
 			break;
 		}
 		case 9:
@@ -540,7 +556,7 @@ LRESULT CRemoteClientDlg::OnSendPacketACK(WPARAM wParam, LPARAM lParam)
 		}
 		case 666:
 		{
-			TRACE(" Test connect! \r\n");
+			MessageBox("连接测试成功", "连接成功", MB_ICONINFORMATION);
 			break;
 		}
 		default:

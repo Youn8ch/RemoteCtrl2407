@@ -159,7 +159,7 @@ typedef struct file_info {
 	BOOL IsDirectory; // 是否是目录 0否 1是
 	BOOL HasNext; // 是否还有后续 0否 1是
 	char szFileName[256]; // 文件名
-}FILEINFO, * PFILEINFO;
+}FILEINFO, *PFILEINFO;
 
 
 

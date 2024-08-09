@@ -5,7 +5,7 @@
 #pragma once
 #include "StatusDlg.h"
 #include <mutex>
-
+#include "ClientSocket.h"
 
 #define WM_SEND_PACKET (WM_USER + 1)
 
@@ -54,6 +54,12 @@ public:
 private:
 	// void LoadFileInfo();
 	void LoadFileCurInfo();
+	void Str2Tree(const std::string& driver, CTreeCtrl& tree);
+
+	void UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent);
+
+
+	void UpdataDownloadFile(const std::string& strData, FILE* pFILE);
 	// 后缀没带"\\"
 	CString GetTreePath(HTREEITEM hTree);
 	void DeleteTreeChildItem(HTREEITEM hTree);
