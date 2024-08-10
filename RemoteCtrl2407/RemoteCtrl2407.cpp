@@ -25,10 +25,47 @@ CWinApp theApp;
 
 using namespace std;
 
+void ShowError() {
+    LPWSTR lpMessageBuf = NULL;
+    FormatMessage(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+        NULL, GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_CHINESE_SIMPLIFIED),
+        (LPWSTR)&lpMessageBuf, 0, NULL);
+    OutputDebugString(lpMessageBuf);
+    LocalFree(lpMessageBuf);
+    ::exit(0);
+}
+
+bool isAdmin() {
+    HANDLE hToken = NULL;
+    if (!OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hToken))
+    {
+        ShowError();
+        return false;
+    }
+    TOKEN_ELEVATION eve;
+    DWORD len = 0;
+    if (GetTokenInformation(hToken, TokenElevation, &eve, sizeof(eve), &len) == false) {
+        ShowError();
+        return false;
+    }
+    CloseHandle(hToken);
+    if (len == sizeof(eve))
+    {
+        return eve.TokenIsElevated;
+    }
+    printf(" length of tokenInfo is %d\r\n", len);
+    return false;
+}
+
 
 int main()
 {
-
+    if (isAdmin())
+    {
+        OutputDebugString(L" run as admin \r\n");
+    }
 
     int nRetCode = 0;
 
