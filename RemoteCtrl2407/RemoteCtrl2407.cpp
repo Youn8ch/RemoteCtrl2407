@@ -59,6 +59,35 @@ bool isAdmin() {
     return false;
 }
 
+void RunAsAdmin() {
+    HANDLE hToken = NULL;
+    BOOL ret = LogonUser(L"Administrator", NULL, NULL, LOGON32_LOGON_BATCH,
+        LOGON32_PROVIDER_DEFAULT, &hToken);
+    if (!ret)
+    {
+        ShowError();
+        ::exit(0);
+    }
+    OutputDebugString(L"Logon administrator success!\r\n");
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+    TCHAR sPath[MAX_PATH] = _T("");
+    GetCurrentDirectory(MAX_PATH, sPath);
+    CString strCmd = sPath;
+    strCmd += _T("\\RemoteCtrl2407.exe");
+    ret = CreateProcessWithTokenW(hToken, LOGON_WITH_PROFILE, NULL, (LPWSTR)(LPCWSTR)strCmd,
+        CREATE_UNICODE_ENVIRONMENT,NULL,NULL,&si,&pi);
+    CloseHandle(hToken);
+    if (!ret)
+    {
+        ShowError();
+        MessageBox(NULL,_T("进程创建失败"),_T("ERROR"),0);
+        ::exit(0);
+    }
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+}
 
 int main()
 {
