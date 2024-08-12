@@ -12,6 +12,9 @@
 #include "Log.h"
 #include "Command.h"
 #include <conio.h>
+#include "Queue.h"
+
+
 #pragma comment(lib, "Ws2_32.lib")
 
 
@@ -39,7 +42,7 @@ typedef struct IOCP_Param
     int nOperator;
     std::string strData;
     _beginthread_proc_type cbFunc;
-    IOCP_Param(int op, const char* data, _beginthread_proc_type cb = NULL) {
+    IOCP_Param(int op, const char* data = "", _beginthread_proc_type cb = NULL) {
         nOperator = op;
         strData = data;
         cbFunc = cb;
@@ -47,20 +50,23 @@ typedef struct IOCP_Param
     IOCP_Param() {
         nOperator = -1;
     }
-}IOCP_PARAM;
+}IOCP_PARAM,*pIOCP_PARAM;
 
-void threadQueueEntry(HANDLE hIOCP)
-{
+
+
+void threadmain(HANDLE hIOCP) {
     std::list<std::string> lstString;
     DWORD dwTransfer = 0;
     ULONG_PTR CompKey = 0;
     OVERLAPPED* pOverlap = NULL;
+    int count = 0, count0 = 0;
     while (GetQueuedCompletionStatus(hIOCP
-        , &dwTransfer, &CompKey, &pOverlap, INFINITE)) 
+        , &dwTransfer, &CompKey, &pOverlap, INFINITE))
     {
-        if (dwTransfer ==0 || CompKey==NULL)
+        if (dwTransfer == 0 || CompKey == NULL)
         {
             printf("thread to close\r\n");
+            break;
         }
         IOCP_PARAM* pParam = (IOCP_PARAM*)CompKey;
         switch (pParam->nOperator)
@@ -68,12 +74,13 @@ void threadQueueEntry(HANDLE hIOCP)
         case IocpListPush:
         {
             lstString.push_back(pParam->strData);
+            count0++;
             break;
         }
         case IocpListPop:
         {
             std::string* pStr = NULL;
-            if (lstString.size()>0)
+            if (lstString.size() > 0)
             {
                 pStr = new std::string(lstString.front());
                 lstString.pop_front();
@@ -82,15 +89,27 @@ void threadQueueEntry(HANDLE hIOCP)
             {
                 pParam->cbFunc(pStr);
             }
+            count++;
+            break;
         }
         default:
         {
+            printf(" T!!!!!!!!!!!! ");
             lstString.clear();
             break;
         }
         }
         delete pParam;
+
     }
+    printf(" Thread count = %d , count0 = %d \r\n", count, count0);
+    Sleep(1000);
+}
+
+
+void threadQueueEntry(HANDLE hIOCP)
+{
+    threadmain(hIOCP);
     _endthread();
 }
 
@@ -98,7 +117,7 @@ void func(void* arg) {
     std::string* pStr = (std::string*)arg;
     if (pStr != NULL)
     {
-        printf("pop -> %s \r\n", arg);
+        printf("pop -> %s \r\n", pStr->c_str());
         delete pStr;
     }
     else
@@ -111,32 +130,34 @@ int main()
 {
 
     if (!CTool::Init()) return 1;
-    HANDLE hIOCP = INVALID_HANDLE_VALUE;  // IO Completion Port
-    hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE,NULL,NULL,1);
-    // epoll 区别1 IOCP可以多线程
-    HANDLE hThread = (HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
+
+
     
+    CQueue<std::string> lstStrings;
+
     ULONGLONG tick = GetTickCount64();
-    while (_kbhit()!=0)
+    ULONGLONG tick0 = GetTickCount64();
+    printf("press\r\n");
+
+    while (_kbhit() == 0)
     {
-        if ((GetTickCount64() - tick) > 1300)
+        if ((GetTickCount64() - tick0) > 130)
         {
-            PostQueuedCompletionStatus(hIOCP, 0, (ULONG_PTR)new IOCP_PARAM(IocpListPop, "666", func), NULL);
+            lstStrings.Pushback("666");
+            tick0 = GetTickCount64();
         }
-        if ((GetTickCount64()-tick)>2000)
+        if ((GetTickCount64()-tick)>200)
         {
-            PostQueuedCompletionStatus(hIOCP, 0, (ULONG_PTR)new IOCP_PARAM(IocpListPush,"666", func), NULL);
+            std::string str;
+            lstStrings.Popfront(str);
+            tick = GetTickCount64();
+            printf(" -> %s \r\n", str.c_str());
         }
-        tick = GetTickCount64();
+        printf(" str size = %s \r\n", lstStrings.Size());
         Sleep(1);
     }
-
-    if (hIOCP != NULL)
-    {
-        PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
-        WaitForSingleObject(hIOCP,INFINITE);
-    }
-    printf("123123\r\n");
+    lstStrings.Clear();
+    printf(" closed str size = %s \r\n", lstStrings.Size());
     ::exit(0);
 
 

@@ -146,6 +146,7 @@
     <ClInclude Include="Log.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Queue.h" />
     <ClInclude Include="RemoteCtrl2407.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ServerSocket.h" />
