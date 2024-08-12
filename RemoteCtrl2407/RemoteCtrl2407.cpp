@@ -11,6 +11,7 @@
 #include "ServerSocket.h"
 #include "Log.h"
 #include "Command.h"
+#include <conio.h>
 #pragma comment(lib, "Ws2_32.lib")
 
 
@@ -25,114 +26,141 @@ CWinApp theApp;
 
 using namespace std;
 
-void ShowError() {
-    LPWSTR lpMessageBuf = NULL;
-    FormatMessage(
-        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-        NULL, GetLastError(),
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_CHINESE_SIMPLIFIED),
-        (LPWSTR)&lpMessageBuf, 0, NULL);
-    OutputDebugString(lpMessageBuf);
-    LocalFree(lpMessageBuf);
-    ::exit(0);
+
+enum IOCP_LIST
+{
+    IocpListEmpty,
+    IocpListPush,
+    IocpListPop
+};
+
+typedef struct IOCP_Param
+{
+    int nOperator;
+    std::string strData;
+    _beginthread_proc_type cbFunc;
+    IOCP_Param(int op, const char* data, _beginthread_proc_type cb = NULL) {
+        nOperator = op;
+        strData = data;
+        cbFunc = cb;
+    }
+    IOCP_Param() {
+        nOperator = -1;
+    }
+}IOCP_PARAM;
+
+void threadQueueEntry(HANDLE hIOCP)
+{
+    std::list<std::string> lstString;
+    DWORD dwTransfer = 0;
+    ULONG_PTR CompKey = 0;
+    OVERLAPPED* pOverlap = NULL;
+    while (GetQueuedCompletionStatus(hIOCP
+        , &dwTransfer, &CompKey, &pOverlap, INFINITE)) 
+    {
+        if (dwTransfer ==0 || CompKey==NULL)
+        {
+            printf("thread to close\r\n");
+        }
+        IOCP_PARAM* pParam = (IOCP_PARAM*)CompKey;
+        switch (pParam->nOperator)
+        {
+        case IocpListPush:
+        {
+            lstString.push_back(pParam->strData);
+            break;
+        }
+        case IocpListPop:
+        {
+            std::string* pStr = NULL;
+            if (lstString.size()>0)
+            {
+                pStr = new std::string(lstString.front());
+                lstString.pop_front();
+            }
+            if (pParam->cbFunc)
+            {
+                pParam->cbFunc(pStr);
+            }
+        }
+        default:
+        {
+            lstString.clear();
+            break;
+        }
+        }
+        delete pParam;
+    }
+    _endthread();
 }
 
-bool isAdmin() {
-    HANDLE hToken = NULL;
-    if (!OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hToken))
+void func(void* arg) {
+    std::string* pStr = (std::string*)arg;
+    if (pStr != NULL)
     {
-        ShowError();
-        return false;
+        printf("pop -> %s \r\n", arg);
+        delete pStr;
     }
-    TOKEN_ELEVATION eve;
-    DWORD len = 0;
-    if (GetTokenInformation(hToken, TokenElevation, &eve, sizeof(eve), &len) == false) {
-        ShowError();
-        return false;
-    }
-    CloseHandle(hToken);
-    if (len == sizeof(eve))
+    else
     {
-        return eve.TokenIsElevated;
+        printf("ERROR list is empty \r\n");
     }
-    printf(" length of tokenInfo is %d\r\n", len);
-    return false;
-}
-
-void RunAsAdmin() {
-    HANDLE hToken = NULL;
-    BOOL ret = LogonUser(L"Administrator", NULL, NULL, LOGON32_LOGON_BATCH,
-        LOGON32_PROVIDER_DEFAULT, &hToken);
-    if (!ret)
-    {
-        ShowError();
-        ::exit(0);
-    }
-    OutputDebugString(L"Logon administrator success!\r\n");
-    STARTUPINFO si = { 0 };
-    PROCESS_INFORMATION pi = { 0 };
-    TCHAR sPath[MAX_PATH] = _T("");
-    GetCurrentDirectory(MAX_PATH, sPath);
-    CString strCmd = sPath;
-    strCmd += _T("\\RemoteCtrl2407.exe");
-    ret = CreateProcessWithTokenW(hToken, LOGON_WITH_PROFILE, NULL, (LPWSTR)(LPCWSTR)strCmd,
-        CREATE_UNICODE_ENVIRONMENT,NULL,NULL,&si,&pi);
-    CloseHandle(hToken);
-    if (!ret)
-    {
-        ShowError();
-        MessageBox(NULL,_T("进程创建失败"),_T("ERROR"),0);
-        ::exit(0);
-    }
-    WaitForSingleObject(pi.hProcess, INFINITE);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
 }
 
 int main()
 {
-    if (isAdmin())
+
+    if (!CTool::Init()) return 1;
+    HANDLE hIOCP = INVALID_HANDLE_VALUE;  // IO Completion Port
+    hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE,NULL,NULL,1);
+    // epoll 区别1 IOCP可以多线程
+    HANDLE hThread = (HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
+    
+    ULONGLONG tick = GetTickCount64();
+    while (_kbhit()!=0)
     {
-        OutputDebugString(L" run as admin \r\n");
+        if ((GetTickCount64() - tick) > 1300)
+        {
+            PostQueuedCompletionStatus(hIOCP, 0, (ULONG_PTR)new IOCP_PARAM(IocpListPop, "666", func), NULL);
+        }
+        if ((GetTickCount64()-tick)>2000)
+        {
+            PostQueuedCompletionStatus(hIOCP, 0, (ULONG_PTR)new IOCP_PARAM(IocpListPush,"666", func), NULL);
+        }
+        tick = GetTickCount64();
+        Sleep(1);
     }
 
-    int nRetCode = 0;
-
-    HMODULE hModule = ::GetModuleHandle(nullptr);
-
-    if (hModule != nullptr)
+    if (hIOCP != NULL)
     {
-        // 初始化 MFC 并在失败时显示错误
-        if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
+        PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
+        WaitForSingleObject(hIOCP,INFINITE);
+    }
+    printf("123123\r\n");
+    ::exit(0);
+
+
+    /*if (CTool::isAdmin())
+    {
+        if (!CTool::Init()) return 1;
+        OutputDebugString(L" run as admin \r\n");
+        CCommand cmd;
+        int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
+        switch (ret)
         {
-            // TODO: 在此处为应用程序的行为编写代码。
-            wprintf(L"错误: MFC 初始化失败\n");
-            nRetCode = 1;
-        }
-        else
-        {
-			CCommand cmd;
-			CServerSocket* pserver = CServerSocket::getInstance();
-			int ret = pserver->Run(&CCommand::RunCommand, &cmd);
-			switch (ret)
-			{
-			case -1:
-				LOGE(">server socket init failed<"); exit(0);
-				break;
-			case -2:
-				LOGE(">failed conn 3<"); exit(0);
-				break;
-			default:
-				break;
-			}
+        case -1:
+            LOGE(">server socket init failed<"); exit(0);
+            break;
+        case -2:
+            LOGE(">failed conn 3<"); exit(0);
+            break;
+        default:
+            break;
         }
     }
     else
     {
-        // TODO: 更改错误代码以符合需要
-        wprintf(L"错误: GetModuleHandle 失败\n");
-        nRetCode = 1;
+        if (CTool::RunAsAdmin()==false) CTool::ShowError();
     }
-
-    return nRetCode;
+    return 0;*/
 }

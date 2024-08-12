@@ -277,6 +277,8 @@ public:
 			return m_packet.sCmd;
 		}
 	}
+
+
 	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true,WPARAM wParam = 0) {
 		UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
 		std::string strOut;
