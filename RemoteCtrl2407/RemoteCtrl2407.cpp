@@ -126,39 +126,48 @@ void func(void* arg) {
     }
 }
 
-int main()
-{
-
-    if (!CTool::Init()) return 1;
 
 
-    
+void test() {
     CQueue<std::string> lstStrings;
-
     ULONGLONG tick = GetTickCount64();
     ULONGLONG tick0 = GetTickCount64();
-    printf("press\r\n");
-
-    while (_kbhit() == 0)
+    ULONGLONG total = GetTickCount64();
+    while (GetTickCount64() - total <= 1000)
     {
-        if ((GetTickCount64() - tick0) > 130)
+        if ((GetTickCount64() - tick0) > 13)
         {
             lstStrings.Pushback("666");
             tick0 = GetTickCount64();
         }
-        if ((GetTickCount64()-tick)>200)
+        if ((GetTickCount64() - tick) > 20)
         {
             std::string str;
             lstStrings.Popfront(str);
             tick = GetTickCount64();
             printf(" -> %s \r\n", str.c_str());
         }
-        printf(" str size = %s \r\n", lstStrings.Size());
+        // printf(" str size = %s \r\n", lstStrings.Size());
         Sleep(1);
     }
+    printf(" str size = %d \r\n", lstStrings.Size());
     lstStrings.Clear();
-    printf(" closed str size = %s \r\n", lstStrings.Size());
-    ::exit(0);
+    printf(" closed str size = %d \r\n", lstStrings.Size());
+}
+
+int main()
+{
+
+    if (!CTool::Init()) return 1;
+
+
+    //printf("press\r\n");
+    for (size_t i = 0; i < 5; i++)
+    {
+        test();
+    }
+    
+    // ::exit(0);
 
 
     /*if (CTool::isAdmin())

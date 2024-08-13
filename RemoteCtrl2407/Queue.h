@@ -43,17 +43,20 @@ public:
 		m_hThread = INVALID_HANDLE_VALUE;
 		if (m_hCompeletionPort != NULL)
 		{
-			m_hThread = (HANDLE)_beginthread(&CQueue<T>::threadEntry, 0, m_hCompeletionPort);
+			m_hThread = (HANDLE)_beginthread(&CQueue<T>::threadEntry, 0, this);
 		}
 	}
 	~CQueue() {
 		if (m_Lock) return;
 		m_Lock = true;
-		HANDLE hTemp = m_hCompeletionPort;
 		PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
 		WaitForSingleObject(m_hThread, INFINITE);
-		m_hCompeletionPort = NULL;
-		CloseHandle(hTemp);
+		if (m_hCompeletionPort != NULL)
+		{
+			HANDLE hTemp = m_hCompeletionPort;
+			m_hCompeletionPort = NULL;
+			CloseHandle(hTemp);
+		}
 	}
 
 	bool Pushback(const T& data) {
@@ -166,12 +169,12 @@ private:
 				m_lstData.pop_front();
 			}
 			if (pParam->hEvent != NULL) SetEvent(pParam->hEvent);
-
 			break;
 		}
 		case EQClear:
 		{
 			m_lstData.clear();
+			delete pParam;
 			break;
 		}
 		case EQSize:
@@ -202,7 +205,6 @@ private:
 			}
 			pParam = (PPARAM)CompKey;
 			DealParam(pParam);
-			delete pParam;
 		}
 		while (GetQueuedCompletionStatus(m_hCompeletionPort
 			, &dwTransfer, &CompKey, &pOverlap, 0))
@@ -214,9 +216,10 @@ private:
 			}
 			pParam = (PPARAM)CompKey;
 			DealParam(pParam);
-			delete pParam;
 		}
-		CloseHandle(m_hCompeletionPort);
+		HANDLE hTemp = m_hCompeletionPort;
+		CloseHandle(hTemp);
+		m_hCompeletionPort = NULL;
 	}
 private:
 	std::list<T> m_lstData;
