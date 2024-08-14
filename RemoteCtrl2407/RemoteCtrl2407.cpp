@@ -13,8 +13,8 @@
 #include "Command.h"
 #include <conio.h>
 #include "Queue.h"
-
-
+#include "MSWSock.h"
+#include "EServer.h"
 #pragma comment(lib, "Ws2_32.lib")
 
 
@@ -29,130 +29,83 @@ CWinApp theApp;
 
 using namespace std;
 
-
-enum IOCP_LIST
+class COverlapped
 {
-    IocpListEmpty,
-    IocpListPush,
-    IocpListPop
+public:
+    OVERLAPPED m_overlapped;
+    DWORD m_operator;
+    char m_buffer[4096];
+    COverlapped() {
+        m_operator = 0;
+        memset(&m_overlapped, 0, sizeof(OVERLAPPED));
+        memset(&m_buffer, 0, sizeof(m_buffer));
+    }
+
 };
 
-typedef struct IOCP_Param
-{
-    int nOperator;
-    std::string strData;
-    _beginthread_proc_type cbFunc;
-    IOCP_Param(int op, const char* data = "", _beginthread_proc_type cb = NULL) {
-        nOperator = op;
-        strData = data;
-        cbFunc = cb;
-    }
-    IOCP_Param() {
-        nOperator = -1;
-    }
-}IOCP_PARAM,*pIOCP_PARAM;
+void iocp() {
+    EServer server;
+    server.StartServer();
+    getchar();
 
 
 
-void threadmain(HANDLE hIOCP) {
-    std::list<std::string> lstString;
-    DWORD dwTransfer = 0;
-    ULONG_PTR CompKey = 0;
-    OVERLAPPED* pOverlap = NULL;
-    int count = 0, count0 = 0;
-    while (GetQueuedCompletionStatus(hIOCP
-        , &dwTransfer, &CompKey, &pOverlap, INFINITE))
-    {
-        if (dwTransfer == 0 || CompKey == NULL)
-        {
-            printf("thread to close\r\n");
-            break;
-        }
-        IOCP_PARAM* pParam = (IOCP_PARAM*)CompKey;
-        switch (pParam->nOperator)
-        {
-        case IocpListPush:
-        {
-            lstString.push_back(pParam->strData);
-            count0++;
-            break;
-        }
-        case IocpListPop:
-        {
-            std::string* pStr = NULL;
-            if (lstString.size() > 0)
-            {
-                pStr = new std::string(lstString.front());
-                lstString.pop_front();
-            }
-            if (pParam->cbFunc)
-            {
-                pParam->cbFunc(pStr);
-            }
-            count++;
-            break;
-        }
-        default:
-        {
-            printf(" T!!!!!!!!!!!! ");
-            lstString.clear();
-            break;
-        }
-        }
-        delete pParam;
-
-    }
-    printf(" Thread count = %d , count0 = %d \r\n", count, count0);
-    Sleep(1000);
-}
-
-
-void threadQueueEntry(HANDLE hIOCP)
-{
-    threadmain(hIOCP);
-    _endthread();
-}
-
-void func(void* arg) {
-    std::string* pStr = (std::string*)arg;
-    if (pStr != NULL)
-    {
-        printf("pop -> %s \r\n", pStr->c_str());
-        delete pStr;
-    }
-    else
-    {
-        printf("ERROR list is empty \r\n");
-    }
-}
 
 
 
-void test() {
-    CQueue<std::string> lstStrings;
-    ULONGLONG tick = GetTickCount64();
-    ULONGLONG tick0 = GetTickCount64();
-    ULONGLONG total = GetTickCount64();
-    while (GetTickCount64() - total <= 1000)
-    {
-        if ((GetTickCount64() - tick0) > 13)
-        {
-            lstStrings.Pushback("666");
-            tick0 = GetTickCount64();
-        }
-        if ((GetTickCount64() - tick) > 20)
-        {
-            std::string str;
-            lstStrings.Popfront(str);
-            tick = GetTickCount64();
-            printf(" -> %s \r\n", str.c_str());
-        }
-        // printf(" str size = %s \r\n", lstStrings.Size());
-        Sleep(1);
-    }
-    printf(" str size = %d \r\n", lstStrings.Size());
-    lstStrings.Clear();
-    printf(" closed str size = %d \r\n", lstStrings.Size());
+
+
+
+
+
+
+    //SOCKET sock = socket(AF_INET, SOCK_STREAM, 0); // TCP
+    //sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+    //if (sock == INVALID_SOCKET)
+    //{
+    //    CTool::ShowError();
+    //    return;
+    //}
+    //HANDLE hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, sock, 4);
+    //SOCKET client = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+    //CreateIoCompletionPort((HANDLE)sock, hIOCP, 0, 0);
+
+    //sockaddr_in addr;
+    //addr.sin_family = PF_INET;
+    //addr.sin_addr.s_addr = inet_addr("0.0.0.0");
+    //addr.sin_port = htons(8554);
+    //bind(sock, (sockaddr*)&addr, sizeof(addr));
+    //listen(sock, 5);
+
+    //COverlapped overlapped;
+    //overlapped.m_operator = 1;
+    //memset(&overlapped, 0, sizeof(COverlapped));
+    //DWORD received = 0;
+    //if (AcceptEx(sock, client, overlapped.m_buffer, 0,
+    //    sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &received, &overlapped.m_overlapped) == FALSE) {
+    //    CTool::ShowError();
+    //}
+
+
+
+    //while (true)
+    //{
+    //    LPOVERLAPPED pOverlapped = NULL;
+    //    DWORD transferred = 0;
+    //    unsigned __int64 key = 0;
+    //    if (GetQueuedCompletionStatus(hIOCP, &transferred, &key, &pOverlapped, INFINITY)) {
+    //        COverlapped* p0 = CONTAINING_RECORD(pOverlapped, COverlapped, m_overlapped);
+    //        switch (p0->m_operator)
+    //        {
+    //        default:
+    //            break;
+    //        }
+    //    }
+    //}
+
+ 
+
+
 }
 
 int main()
@@ -160,17 +113,7 @@ int main()
 
     if (!CTool::Init()) return 1;
 
-
-    //printf("press\r\n");
-    for (size_t i = 0; i < 5; i++)
-    {
-        test();
-    }
-    
-    // ::exit(0);
-
-
-    /*if (CTool::isAdmin())
+    if (CTool::isAdmin())
     {
         if (!CTool::Init()) return 1;
         OutputDebugString(L" run as admin \r\n");
@@ -192,5 +135,5 @@ int main()
     {
         if (CTool::RunAsAdmin()==false) CTool::ShowError();
     }
-    return 0;*/
+    return 0;
 }

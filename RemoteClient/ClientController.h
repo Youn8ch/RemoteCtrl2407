@@ -146,7 +146,7 @@ private:
 			result = m.result;
 			memcpy(&msg, &(m.msg), sizeof(MSG));
 		}
-		MsgInfo& operator=(const const MsgInfo& m) {
+		MsgInfo& operator=(const MsgInfo& m) {
 			if (this != &m)
 			{
 				result = m.result;

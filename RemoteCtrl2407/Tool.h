@@ -90,6 +90,7 @@ public:
             wprintf(L"´íÎó: MFC ³õÊ¼»¯Ê§°Ü\n");
             return false;
         }
+        return true;
     }
 };
 

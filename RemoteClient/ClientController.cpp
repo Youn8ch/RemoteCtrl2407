@@ -39,7 +39,7 @@ int CClientController::InitController()
 int CClientController::Invoke(CWnd*& pMainWnd)
 {
 	pMainWnd = &m_remoteDlg;
-	return m_remoteDlg.DoModal();
+	return (int)m_remoteDlg.DoModal();
 
 }
 

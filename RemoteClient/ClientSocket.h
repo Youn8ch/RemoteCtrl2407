@@ -273,7 +273,7 @@ public:
 			if (index < BUFFER_SIZE) {
 				memmove(buffer, buffer + index, BUFFER_SIZE - index);
 			}
-			m_index -= index;
+			m_index -= (int)index;
 			return m_packet.sCmd;
 		}
 	}
@@ -432,6 +432,7 @@ private:
 		m_buffer.resize(BUFFER_SIZE);
 		m_eventInvoke = CreateEvent(NULL, TRUE, FALSE, NULL);
 		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_Threadid);
+		if (m_eventInvoke == 0) return;
 		if (WaitForSingleObject(m_eventInvoke,100) == WAIT_TIMEOUT)
 		{
 			TRACE("网络消息处理线程启动失败 \r\n");

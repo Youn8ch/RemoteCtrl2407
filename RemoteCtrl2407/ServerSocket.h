@@ -98,7 +98,7 @@ public:
 		while (true)
 		{
 			// LOGI("WAIT RECV");
-			size_t len = (size_t)(recv(m_client, buffer + m_index, BUFFER_SIZE - m_index, 0));
+			size_t len = (size_t)(recv(m_client, buffer + m_index, (int)(BUFFER_SIZE - m_index), 0));
 			m_index += len;
 			if (m_index <= 0)
 			{
@@ -163,7 +163,7 @@ private:
 
 	BOOL InitSockEnv() {
 		WSADATA data;
-		if (WSAStartup(MAKEWORD(1, 1), &data) != 0) {
+		if (WSAStartup(MAKEWORD(2, 0), &data) != 0) {
 			return FALSE;
 		}
 		return TRUE;
