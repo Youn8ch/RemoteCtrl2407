@@ -54,7 +54,7 @@
     <ClInclude Include="Thread.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="EServer.h">
+    <ClInclude Include="EServer2.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -74,7 +74,7 @@
     <ClCompile Include="Command.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="EServer.cpp">
+    <ClCompile Include="EServer2.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

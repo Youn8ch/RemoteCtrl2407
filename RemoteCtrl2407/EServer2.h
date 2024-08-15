@@ -18,7 +18,7 @@ class EServer;
 class EClient;
 typedef std::shared_ptr<EClient> PCLIENT;
 
-class EOverlapped
+class EOverlapped : public ThreadFuncBase
 {
 public:
     OVERLAPPED m_overlapped;
@@ -43,9 +43,63 @@ typedef RecvOverlapped<ERecv> RECVOVERLAPPED;
 template <EOperator>class SendOverlapped;
 typedef SendOverlapped<ESend> SENDOVERLAPPED;
 
+class EClient : public ThreadFuncBase
+{
+public:
+    EClient();
+    ~EClient() { closesocket(m_sock);
+}
+
+    void SetOverlapped(PCLIENT& ptr);
+
+    operator SOCKET() {
+        return m_sock;
+    }
+    operator PVOID() {
+        return &m_buffer[0];
+    }
+    operator LPOVERLAPPED();
+    operator LPDWORD() {
+        return &m_received;
+    }
+    int Recv() {
+        int ret = recv(m_sock, m_buffer.data(), m_buffer.size(), 0);
+        if (ret <= 0) return -1;
+        m_used += (size_t)ret;
+        // 解析数据
+        return 0;
+    }
+    size_t GetBufferSize() const {
+        return m_buffer.size();
+    }
+    DWORD& flags() {
+        return m_flags;
+    }
+    LPWSABUF RecvWSAbuffer();
+    LPWSABUF SendWSAbuffer();
+    sockaddr_in* GetLocalAddr() { return &m_laddr; }
+    sockaddr_in* GetRemoteAddr() { return &m_raddr; }
+public:
+    SOCKET m_sock;
+    DWORD m_received;
+    DWORD m_flags;
+    std::shared_ptr<ACCEPTOVERLAPPED> m_overlapped;
+    std::shared_ptr<RECVOVERLAPPED> m_recv;
+    std::shared_ptr<SENDOVERLAPPED> m_send;
+    std::vector<char> m_buffer;
+    size_t m_used; // 已经使用的缓存区大小
+    sockaddr_in m_laddr;
+    sockaddr_in m_raddr;
+    bool isBusy;
+};
+
+
+
+
+
 // EAccept
-template <EOperator op>
-class AcceptOverlapped:public EOverlapped, ThreadFuncBase
+template <EOperator>
+class AcceptOverlapped :public EOverlapped
 {
 public:
     AcceptOverlapped();
@@ -53,17 +107,18 @@ public:
 };
 
 // ERecv
-template <EOperator op>
-class RecvOverlapped :public EOverlapped, ThreadFuncBase
+template <EOperator>
+class RecvOverlapped :public EOverlapped
 {
 public:
     RecvOverlapped();
     int RecvWorker();
 };
 
+
 // ESend
-template <EOperator op>
-class SendOverlapped :public EOverlapped, ThreadFuncBase
+template <EOperator>
+class SendOverlapped :public EOverlapped
 {
 public:
     SendOverlapped();
@@ -94,59 +149,7 @@ public:
 // ============================================================================
 
 
-class EClient
-{
-public:
-    EClient();
 
-    ~EClient() {
-        closesocket(m_sock);
-    }
-
-    void SetOverlapped(PCLIENT& ptr);
-
-    operator SOCKET() {
-        return m_sock;
-    }
-    operator PVOID() {
-        return &m_buffer[0];
-    }
-    operator LPOVERLAPPED();
-    operator LPDWORD() {
-        return &m_received;
-    }
-    int Recv() {
-        int ret = recv(m_sock, m_buffer.data(), m_buffer.size(), 0);
-        if (ret<=0) return -1;
-        m_used += (size_t)ret;
-        // 解析数据
-        return 0;
-    }
-    size_t GetBufferSize() const {
-        return m_buffer.size();
-    }
-    DWORD& flags() {
-        return m_flags;
-    }
-    LPWSABUF RecvWSAbuffer() {
-        return &m_recv->m_wsabuffer;
-    }
-    LPWSABUF SendWSAbuffer() {
-        return &m_send->m_wsabuffer;
-    }
-public:
-    SOCKET m_sock;
-    DWORD m_received;
-    DWORD m_flags;
-    std::shared_ptr<ACCEPTOVERLAPPED> m_overlapped;
-    std::shared_ptr<RECVOVERLAPPED> m_recv;
-    std::shared_ptr<SENDOVERLAPPED> m_send;
-    std::vector<char> m_buffer;
-    size_t m_used; // 已经使用的缓存区大小
-    sockaddr_in m_laddr;
-    sockaddr_in m_raddr;
-    bool isBusy;
-};
 
 
 
