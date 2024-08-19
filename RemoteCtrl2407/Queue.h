@@ -4,6 +4,9 @@
 #include "pch.h"
 #include <list>
 #include "Log.h"
+#include "Thread.h"
+
+
 template<class T>
 class CQueue
 {
@@ -46,7 +49,7 @@ public:
 			m_hThread = (HANDLE)_beginthread(&CQueue<T>::threadEntry, 0, this);
 		}
 	}
-	~CQueue() {
+	virtual ~CQueue() {
 		if (m_Lock) return;
 		m_Lock = true;
 		PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
@@ -74,7 +77,7 @@ public:
 		if (!ret) delete pParam;
 		return ret;
 	}
-	bool Popfront(T& data) {
+	virtual bool Popfront(T& data) {
 		HANDLE temphEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 		PARAM Param(EQPop, data, temphEvent);
 		if (m_Lock) {
@@ -150,9 +153,9 @@ public:
 		_endthread();
 	}
 
-private:
+protected:
 
-	void DealParam(PPARAM pParam) {
+	virtual void DealParam(PPARAM pParam) {
 		switch (pParam->nOperator)
 		{
 		case EQPush:
@@ -165,6 +168,7 @@ private:
 		{
 			if (m_lstData.size() > 0)
 			{
+				// 讲道理，只是取 strData
 				pParam->strData = m_lstData.front();
 				m_lstData.pop_front();
 			}
@@ -190,7 +194,7 @@ private:
 		}
 		}
 	}
-	void threadMain() {
+	virtual void threadMain() {
 		PPARAM pParam = NULL;
 		ULONG_PTR CompKey = 0;
 		DWORD dwTransfer = 0;
@@ -221,10 +225,123 @@ private:
 		CloseHandle(hTemp);
 		m_hCompeletionPort = NULL;
 	}
-private:
+
+	std::list<T>& GetlstData() {
+		return m_lstData;
+	}
+
+	bool getAtomicFlag() const { return m_Lock.load(); }
+	void setAtomicFlag(bool value) { m_Lock.store(value); }
+
+
+protected:
 	std::list<T> m_lstData;
 	HANDLE m_hCompeletionPort;
 	HANDLE m_hThread;
-	std::atomic<bool> m_Lock; // 队列析构
+    std::atomic<bool> m_Lock; // 队列析构
+   // bool m_Lock; // 队列析构
 };
 
+
+
+
+template<class T>
+class CSendQueue : public CQueue<T> , public ThreadFuncBase
+{
+public:
+	typedef int (ThreadFuncBase::* ECALLBACK)(T& data);
+	CSendQueue() {}
+	CSendQueue(ThreadFuncBase* obj, ECALLBACK callback) :
+		CQueue<T>(), m_base(obj), m_callback(callback)
+	{
+		m_thread.Start();
+		m_thread.UpdateWorker(::ThreadWorker(this, (FUNCTYPE)&CSendQueue<T>::threadTick));
+		
+	}
+	virtual ~CSendQueue() {
+		m_base = NULL;
+		m_callback = NULL;
+	}
+
+protected:
+	int threadTick() {
+		if (CQueue<T>::GetlstData().size() > 0)
+		{
+			Popfront();
+		}
+		Sleep(1);
+		return 0;
+	}
+	virtual bool Popfront(T& data) {
+		return false;
+	}
+	bool Popfront() {
+		typename CQueue<T>::IOCP_Param* Param = new typename CQueue<T>::IOCP_Param(CQueue<T>::EQPop, T());
+		if (CQueue<T>::getAtomicFlag()) {
+			delete Param;
+			return false;
+		}
+		bool ret = PostQueuedCompletionStatus(
+			CQueue<T>::m_hCompeletionPort,
+			sizeof(*Param),
+			(ULONG_PTR)&Param,
+			NULL
+		);
+		if (!ret) {
+			delete Param;
+			return false;
+		}
+		return ret;
+	}
+
+	virtual void DealParam(typename CQueue<T>::PPARAM pParam) {
+		switch (pParam->nOperator)
+		{
+		case CQueue<T>::EQPush:
+		{
+			CQueue<T>::GetlstData().push_back(pParam->strData);
+			delete pParam;
+			break;
+		}
+		case CQueue<T>::EQPop:
+		{
+			if (CQueue<T>::GetlstData().size() > 0)
+			{
+				pParam->strData = CQueue<T>::GetlstData().front();
+				if ((m_base->*m_callback)(pParam->strData) == 0) {
+					CQueue<T>::GetlstData().pop_front();
+				}
+			}
+			delete pParam;
+			break;
+		}
+		case CQueue<T>::EQClear:
+		{
+			CQueue<T>::GetlstData().clear();
+			delete pParam;
+			break;
+		}
+		case CQueue<T>::EQSize:
+		{
+			pParam->nOperator = CQueue<T>::GetlstData().size();
+			if (pParam->hEvent != NULL) SetEvent(pParam->hEvent);
+			break;
+		}
+		default:
+		{
+			LOGE(" m_lstData ERROR! ");
+			break;
+		}
+		}
+	}
+
+
+
+private:
+	ThreadFuncBase* m_base;
+	ECALLBACK m_callback;
+	CThread m_thread;
+
+};
+
+typedef CSendQueue<std::vector<char>>::ECALLBACK SENDCALLBACK;

@@ -77,21 +77,21 @@ public:
     }
 
 
-    static bool Init() {
-        HMODULE hModule = ::GetModuleHandle(nullptr);
-        if (hModule == nullptr)
-        {
-            wprintf(L"错误: 失败\n");
-            return false;
+    static bool Init() 
+        {//用于带mfc命令行项目初始化（通用）
+            HMODULE hModule = ::GetModuleHandle(nullptr);
+            if (hModule == nullptr) {
+                wprintf(L"错误: GetModuleHandle 失败\n");
+                return false;
+            }
+            if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
+            {
+                // TODO: 在此处为应用程序的行为编写代码。
+                wprintf(L"错误: MFC 初始化失败\n");
+                return false;
+            }
+            return true;
         }
-        if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
-        {
-            // TODO: 在此处为应用程序的行为编写代码。
-            wprintf(L"错误: MFC 初始化失败\n");
-            return false;
-        }
-        return true;
-    }
 };
 
 

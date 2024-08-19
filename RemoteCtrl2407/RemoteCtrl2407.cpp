@@ -110,30 +110,26 @@ void iocp() {
 
 int main()
 {
-
     if (!CTool::Init()) return 1;
+    iocp();
 
-    if (CTool::isAdmin())
-    {
-        if (!CTool::Init()) return 1;
-        OutputDebugString(L" run as admin \r\n");
-        CCommand cmd;
-        int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
-        switch (ret)
-        {
-        case -1:
-            LOGE(">server socket init failed<"); exit(0);
-            break;
-        case -2:
-            LOGE(">failed conn 3<"); exit(0);
-            break;
-        default:
-            break;
-        }
-    }
-    else
-    {
-        if (CTool::RunAsAdmin()==false) CTool::ShowError();
-    }
+
+    //if (!CTool::Init()) return 1;
+    //OutputDebugString(L" run as admin \r\n");
+    //CCommand cmd;
+    //int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
+    //switch (ret)
+    //{
+    //case -1:
+    //    LOGE(">server socket init failed<"); exit(0);
+    //    break;
+    //case -2:
+    //    LOGE(">failed conn 3<"); exit(0);
+    //    break;
+    //default:
+    //    break;
+    //}
+
+
     return 0;
 }

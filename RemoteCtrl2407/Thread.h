@@ -11,10 +11,7 @@ class ThreadWorker
 {
 
 public:
-	ThreadWorker() {
-		thiz = NULL;
-		func = NULL;
-	}
+	ThreadWorker() :thiz(NULL), func(NULL) {};
 	ThreadWorker(ThreadFuncBase* obj, FUNCTYPE f) {
 		thiz = obj;
 		func = f;
@@ -73,22 +70,28 @@ public:
 	}
 
 	void UpdateWorker(const ::ThreadWorker& worker = ::ThreadWorker()) {
-		if (!worker.IsValid())
-		{
-			m_worker.store(NULL);
-			return;
-		}
-		if (m_worker.load()!=NULL)
+		if (m_worker.load() != NULL && m_worker.load()!= &worker)
 		{
 			::ThreadWorker* pWorker = m_worker.load();
 			m_worker.store(NULL);
 			delete pWorker;
 		}
+		
+		if (!worker.IsValid())
+		{
+			m_worker.store(NULL);
+			return;
+		}
+		
 		m_worker.store(new ::ThreadWorker(worker));
 	}
 
 	// true 表示空闲 false表示已分配
 	bool IsIdle() {
+		if (m_worker.load() == NULL)
+		{
+			return true;
+		}
 		return !m_worker.load()->IsValid();
 	}
 
@@ -105,6 +108,11 @@ private:
 	void ThreadWorker() {
 		while (m_bStatus)
 		{
+			if (m_worker.load()==NULL)
+			{
+				Sleep(1);
+				continue;
+			}
 			::ThreadWorker worker = *m_worker.load();
 			if (worker.IsValid())
 			{
@@ -155,6 +163,12 @@ public:
 	}
 	~ThreadPool() {
 		Stop();
+		for (size_t i = 0; i < m_threads.size(); i++)
+		{
+			CThread* pThread = m_threads[i];
+			m_threads[i] = NULL;
+			delete pThread;
+		}
 		m_threads.clear();
 	}
 public:

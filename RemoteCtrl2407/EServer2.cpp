@@ -16,7 +16,7 @@ template <EOperator op>
 int AcceptOverlapped<op>::AcceptWorker()
 {
     INT lLength = 0, rLength = 0;
-    if (*(LPDWORD)*m_client.get() > 0)
+    if (m_client->GetBufferSize() > 0)
     {
         GetAcceptExSockaddrs(*m_client, 0,
             sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
@@ -42,19 +42,6 @@ int AcceptOverlapped<op>::AcceptWorker()
 
 }
 
-
-
-template <EOperator op>
-int RecvOverlapped<op>::RecvWorker()
-{
-    return 0;
-}
-
-template <EOperator op>
-int SendOverlapped<op>::SendWorker()
-{
-    return 0;
-}
 
 
 
@@ -83,7 +70,8 @@ EClient::EClient() :
     m_flags(0),
     m_overlapped(new ACCEPTOVERLAPPED()),
     m_recv(new RECVOVERLAPPED()),
-    m_send(new SENDOVERLAPPED())
+    m_send(new SENDOVERLAPPED()),
+    m_vecSend(this,(SENDCALLBACK)& EClient::SendData)
 {
     m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
     m_buffer.resize(1024);
@@ -91,7 +79,9 @@ EClient::EClient() :
     memset(&m_raddr, 0, sizeof(m_raddr));
 }
 
-void EClient::SetOverlapped(PCLIENT& ptr)
+
+
+void EClient::SetOverlapped(EClient* ptr)
 {
     m_overlapped->m_client = ptr;
     m_recv->m_client = ptr;
@@ -102,6 +92,39 @@ EClient::operator LPOVERLAPPED()
 {
     return &m_overlapped->m_overlapped;
 }
+
+int EClient::Recv()
+{
+    int ret = recv(m_sock, m_buffer.data(), m_buffer.size(), 0);
+    if (ret <= 0) return -1;
+    m_used += (size_t)ret;
+    // ½âÎöÊý¾Ý
+    return 0;
+}
+
+int EClient::Send(void* buffer, size_t nSize)
+{
+    std::vector<char> data(nSize);
+    memcpy(data.data(), buffer, nSize);
+    return (m_vecSend.Pushback(data)) ? 0 : -1;
+    return 0;
+}
+
+int EClient::SendData(std::vector<char>& data)
+{
+    if (m_vecSend.Size()>0)
+    {
+        int ret = WSASend(m_sock, SendWSAbuffer(), 1, &m_received, m_flags, &m_send->m_overlapped, NULL);
+        if (ret!=0 && WSAGetLastError()!=WSA_IO_PENDING)
+        {
+            CTool::ShowError();
+            return -1;
+        }
+    }
+    return 0;
+}
+
+
 
 LPWSABUF EClient::RecvWSAbuffer()
 {
@@ -161,7 +184,7 @@ int EServer::threadIocp() {
         }
 
     }
-    return -2;
+    return 0;
 
 }
 

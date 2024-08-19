@@ -26,12 +26,10 @@ public:
     std::vector<char> m_buffer;
     ThreadWorker m_worker; // 处理函数
     EServer* m_server; // 服务器对象
-    PCLIENT m_client; // 对应客户端
+    EClient* m_client; // 对应客户端
     WSABUF m_wsabuffer;
-    EOverlapped() {
-        m_operator = 0;
-        memset(&m_overlapped, 0, sizeof(OVERLAPPED));
-        memset(&m_buffer, 0, sizeof(m_buffer));
+    virtual ~EOverlapped() {
+        m_client = NULL;
     }
 
 };
@@ -47,28 +45,32 @@ class EClient : public ThreadFuncBase
 {
 public:
     EClient();
-    ~EClient() { closesocket(m_sock);
-}
+    ~EClient() {
+        closesocket(m_sock);
+        m_overlapped.reset();
+        m_send.reset();
+        m_recv.reset();
+    }
 
-    void SetOverlapped(PCLIENT& ptr);
+    EClient(const EClient&) = delete;
+    EClient& operator=(const EClient&) = delete;
+
+
+    void SetOverlapped(EClient* ptr);
 
     operator SOCKET() {
         return m_sock;
     }
     operator PVOID() {
-        return &m_buffer[0];
+        return (PVOID)m_buffer.data();
     }
     operator LPOVERLAPPED();
     operator LPDWORD() {
         return &m_received;
     }
-    int Recv() {
-        int ret = recv(m_sock, m_buffer.data(), m_buffer.size(), 0);
-        if (ret <= 0) return -1;
-        m_used += (size_t)ret;
-        // 解析数据
-        return 0;
-    }
+    int Recv();
+    int Send(void* buffer,size_t nSize);
+    int SendData(std::vector<char>& data);
     size_t GetBufferSize() const {
         return m_buffer.size();
     }
@@ -87,12 +89,23 @@ public:
     std::shared_ptr<RECVOVERLAPPED> m_recv;
     std::shared_ptr<SENDOVERLAPPED> m_send;
     std::vector<char> m_buffer;
-    size_t m_used; // 已经使用的缓存区大小
+    size_t m_used; // 已经使用的缓存区大小 
     sockaddr_in m_laddr;
     sockaddr_in m_raddr;
     bool isBusy;
+    CSendQueue<std::vector<char>> m_vecSend; // 发送队列
 };
 
+
+class MyClass
+{
+public:
+    MyClass();
+    ~MyClass();
+
+private:
+    std::atomic<::ThreadWorker*> m;
+};
 
 
 
@@ -112,7 +125,10 @@ class RecvOverlapped :public EOverlapped
 {
 public:
     RecvOverlapped();
-    int RecvWorker();
+    int RecvWorker() {
+        int ret = m_client->Recv();
+        return ret;
+    }
 };
 
 
@@ -122,7 +138,9 @@ class SendOverlapped :public EOverlapped
 {
 public:
     SendOverlapped();
-    int SendWorker();
+    int SendWorker() {
+        return -1;
+    }
 
 };
 
@@ -175,8 +193,8 @@ public:
     }
     bool StartServer() {
         CreateSocket();
-        if (bind(m_sock, (sockaddr*)&m_addr, sizeof(m_addr)) == false) {
-            LOGE("BIND ERROR");
+        if (bind(m_sock, (sockaddr*)&m_addr, sizeof(m_addr)) == -1) {
+            LOGE("BIND ERROR %d", WSAGetLastError());
             closesocket(m_sock);
             m_sock = INVALID_SOCKET;
             return false;
@@ -204,7 +222,12 @@ public:
     }
 
     ~EServer() {
-
+        std::map<SOCKET, PCLIENT>::iterator it = m_client.begin();
+        for ( ;it!=m_client.end(); it++)
+        {
+            it->second.reset();
+        }
+        m_client.clear();
     }
 public:
     void CreateSocket() {
@@ -214,7 +237,7 @@ public:
     }
 
     bool NewAccept() {
-        PCLIENT pClient(new EClient());
+        EClient* pClient = new EClient();
         pClient->SetOverlapped(pClient);
         m_client.insert(std::pair <SOCKET, PCLIENT>(*pClient, pClient));
 
@@ -234,7 +257,6 @@ public:
     HANDLE m_hIOCP;
     SOCKET m_sock;
     std::map<SOCKET, PCLIENT> m_client;
-    CQueue<EClient> m_lstClient;
     sockaddr_in m_addr;
 };
 
