@@ -253,8 +253,9 @@ public:
     }
     int threadIocp();
 
-    void BindNewSocket(SOCKET s, ULONG_PTR nKey) {
-        CreateIoCompletionPort((HANDLE)s, m_hIOCP, nKey, 0);
+    void BindNewSocket(SOCKET s)
+    {
+        CreateIoCompletionPort((HANDLE)s, m_hIOCP, (ULONG_PTR)this, 0);
     }
 
 public:

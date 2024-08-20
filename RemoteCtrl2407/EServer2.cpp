@@ -26,15 +26,15 @@ int AcceptOverlapped<op>::AcceptWorker()
 
         memcpy(m_client->GetLocalAddr(), pLocalAddr, sizeof(sockaddr_in));
         memcpy(m_client->GetRemoteAddr(), pRemoteAddr, sizeof(sockaddr_in));
-        m_server->BindNewSocket(*m_client, (ULONG_PTR)m_client);
+        m_server->BindNewSocket(*m_client);
 
         int ret = WSARecv((SOCKET)*m_client,
             m_client->RecvWSAbuffer(), 1,
             *m_client, &m_client->flags(), m_client->RecvOverlapped(), NULL);
 
-        if (ret == SOCKET_ERROR && (WSAGetLastError() != WSA_IO_PENDING))
+        if ((ret == SOCKET_ERROR) && (WSAGetLastError() != WSA_IO_PENDING))
         {
-            // TODO 
+            TRACE("ret = %d error = %d\r\n", ret, WSAGetLastError());
         }
 
         if (!m_server->NewAccept())
@@ -102,6 +102,7 @@ int EClient::Recv()
     int ret = recv(m_sock, m_buffer.data(), m_buffer.size(), 0);
     if (ret <= 0) return -1;
     m_used += (size_t)ret;
+    CTool::Dump((BYTE*)m_buffer.data(),ret);
     // ½âÎöÊý¾Ý
     return 0;
 }
