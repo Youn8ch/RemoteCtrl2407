@@ -52,6 +52,7 @@ public:
 	virtual ~CQueue() {
 		if (m_Lock) return;
 		m_Lock = true;
+		
 		PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
 		WaitForSingleObject(m_hThread, INFINITE);
 		if (m_hCompeletionPort != NULL)
@@ -59,6 +60,7 @@ public:
 			HANDLE hTemp = m_hCompeletionPort;
 			m_hCompeletionPort = NULL;
 			CloseHandle(hTemp);
+			LOGI(" close done ");
 		}
 	}
 
@@ -204,7 +206,7 @@ protected:
 		{
 			if (dwTransfer == 0 || CompKey == NULL)
 			{
-				printf("thread to close\r\n");
+				// printf("thread to close\r\n");
 				break;
 			}
 			pParam = (PPARAM)CompKey;

@@ -12,8 +12,8 @@ class ThreadWorker
 
 public:
 	ThreadWorker() :thiz(NULL), func(NULL) {};
-	ThreadWorker(ThreadFuncBase* obj, FUNCTYPE f) {
-		thiz = obj;
+	ThreadWorker(void* obj, FUNCTYPE f) {
+		thiz = (ThreadFuncBase*)obj;
 		func = f;
 	}
 	ThreadWorker(const ThreadWorker& worker) {
@@ -51,8 +51,11 @@ class CThread
 {
 public:
 	bool Start() {
-		m_hThread = (HANDLE)_beginthread(ThreadEntry, 0, this);
-		if (IsVaild()) m_bStatus = true;
+		m_bStatus = true;
+		m_hThread = (HANDLE)_beginthread(&CThread::ThreadEntry, 0, this);
+		if (!IsVaild()) {
+			m_bStatus = false;
+		}
 		return m_bStatus;
 	}
 
@@ -64,7 +67,8 @@ public:
 	bool Stop() {
 		if (!m_bStatus) return true;
 		m_bStatus = false;
-		bool ret = WaitForSingleObject(m_hThread, INFINITE) == WAIT_OBJECT_0;
+		DWORD threadID = GetThreadId(m_hThread);
+		bool ret = (WaitForSingleObject(m_hThread, INFINITE) == WAIT_OBJECT_0);
 		UpdateWorker();
 		return ret;
 	}
@@ -132,6 +136,8 @@ private:
 				Sleep(1);
 			}
 		}
+		DWORD threadID = GetThreadId(m_hThread);
+		LOGI(" Thread quit %d ", threadID);
 	}
 
 	static void ThreadEntry(void* arg) {
@@ -183,15 +189,15 @@ public:
 		}
 		if (!ret)
 		{
-			for (auto& x : m_threads) {
-				x->Stop();
+			for (size_t i = 0; i < m_threads.size(); i++) {
+				m_threads[i]->Stop();
 			}
 		}
 		return ret;
 	}
 	void Stop() {
-		for (auto& x : m_threads) {
-			x->Stop();
+		for (size_t i = 0; i < m_threads.size(); i++) {
+			m_threads[i]->Stop();
 		}
 	}
 

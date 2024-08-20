@@ -11,7 +11,7 @@ CClientController* CClientController::getInstance()
 	if (m_instance == NULL)
 	{
 		m_instance = new CClientController();
-		TRACE(_T("CClientController SIZE = %d \r\n"), sizeof(*m_instance));
+		// TRACE(_T("CClientController SIZE = %d \r\n"), sizeof(*m_instance));
 		struct { UINT nMsg; MSGFUNC func; }MsgFUNCs[]{
 			//{WM_SEND_PACK,&CClientController::OnSendPack},
 			//{WM_SEND_DATA,&CClientController::OnSendData},

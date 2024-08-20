@@ -78,7 +78,9 @@ public:
         return m_flags;
     }
     LPWSABUF RecvWSAbuffer();
+    LPOVERLAPPED RecvOverlapped();
     LPWSABUF SendWSAbuffer();
+    LPOVERLAPPED SendOverlapped();
     sockaddr_in* GetLocalAddr() { return &m_laddr; }
     sockaddr_in* GetRemoteAddr() { return &m_raddr; }
 public:
@@ -94,17 +96,6 @@ public:
     sockaddr_in m_raddr;
     bool isBusy;
     CSendQueue<std::vector<char>> m_vecSend; // ∑¢ÀÕ∂”¡–
-};
-
-
-class MyClass
-{
-public:
-    MyClass();
-    ~MyClass();
-
-private:
-    std::atomic<::ThreadWorker*> m;
 };
 
 
@@ -222,6 +213,8 @@ public:
     }
 
     ~EServer() {
+        CloseHandle(m_hIOCP);
+        closesocket(m_sock);
         std::map<SOCKET, PCLIENT>::iterator it = m_client.begin();
         for ( ;it!=m_client.end(); it++)
         {
@@ -231,6 +224,10 @@ public:
     }
 public:
     void CreateSocket() {
+        WSADATA WSAdata;
+        if (WSAStartup(MAKEWORD(2, 2), &WSAdata) != 0) {
+            return;
+        }
         m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
         int opt = 1;
         setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
@@ -244,14 +241,22 @@ public:
         if (!AcceptEx(m_sock, *pClient, *pClient, 0,
             sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, *pClient, *pClient))
         {
-            closesocket(m_sock);
-            m_sock = INVALID_SOCKET;
-            m_hIOCP = INVALID_HANDLE_VALUE;
-            return false;
+            if (WSAGetLastError()!=WSA_IO_PENDING)
+            {
+                closesocket(m_sock);
+                m_sock = INVALID_SOCKET;
+                m_hIOCP = INVALID_HANDLE_VALUE;
+                return false;
+            }
         }
         return true;
     }
     int threadIocp();
+
+    void BindNewSocket(SOCKET s, ULONG_PTR nKey) {
+        CreateIoCompletionPort((HANDLE)s, m_hIOCP, nKey, 0);
+    }
+
 public:
     ThreadPool m_pool;
     HANDLE m_hIOCP;

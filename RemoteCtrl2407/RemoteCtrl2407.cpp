@@ -47,17 +47,7 @@ void iocp() {
     EServer server;
     server.StartServer();
     getchar();
-
-
-
-
-
-
-
-
-
-
-
+}
 
     //SOCKET sock = socket(AF_INET, SOCK_STREAM, 0); // TCP
     //sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -106,13 +96,13 @@ void iocp() {
  
 
 
-}
 
 int main()
 {
     if (!CTool::Init()) return 1;
     iocp();
-
+    LOGI("OVER");
+    return 0;
 
     //if (!CTool::Init()) return 1;
     //OutputDebugString(L" run as admin \r\n");
@@ -131,5 +121,5 @@ int main()
     //}
 
 
-    return 0;
+
 }

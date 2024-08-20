@@ -18,20 +18,24 @@ int AcceptOverlapped<op>::AcceptWorker()
     INT lLength = 0, rLength = 0;
     if (m_client->GetBufferSize() > 0)
     {
+        LPSOCKADDR pLocalAddr, pRemoteAddr;
         GetAcceptExSockaddrs(*m_client, 0,
             sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
-            (sockaddr**)m_client->GetLocalAddr(), &lLength,
-            (sockaddr**)m_client->GetRemoteAddr(), &rLength);
+            (sockaddr**)&pLocalAddr, &lLength,
+            (sockaddr**)&pRemoteAddr, &rLength);
+
+        memcpy(m_client->GetLocalAddr(), pLocalAddr, sizeof(sockaddr_in));
+        memcpy(m_client->GetRemoteAddr(), pRemoteAddr, sizeof(sockaddr_in));
+        m_server->BindNewSocket(*m_client, (ULONG_PTR)m_client);
 
         int ret = WSARecv((SOCKET)*m_client,
             m_client->RecvWSAbuffer(), 1,
-            *m_client, &m_client->flags(), *m_client, NULL);
+            *m_client, &m_client->flags(), m_client->RecvOverlapped(), NULL);
 
         if (ret == SOCKET_ERROR && (WSAGetLastError() != WSA_IO_PENDING))
         {
             // TODO 
         }
-
 
         if (!m_server->NewAccept())
         {
@@ -124,16 +128,24 @@ int EClient::SendData(std::vector<char>& data)
     return 0;
 }
 
-
-
 LPWSABUF EClient::RecvWSAbuffer()
 {
     return &m_recv->m_wsabuffer;
 }
 
+LPOVERLAPPED EClient::RecvOverlapped()
+{
+    return &m_recv->m_overlapped;
+}
+
 LPWSABUF EClient::SendWSAbuffer()
 {
     return &m_send->m_wsabuffer;
+}
+
+LPOVERLAPPED EClient::SendOverlapped()
+{
+    return &m_send->m_overlapped;
 }
 
 int EServer::threadIocp() {
@@ -143,9 +155,11 @@ int EServer::threadIocp() {
     OVERLAPPED* lpOver = NULL;
     if (GetQueuedCompletionStatus(m_hIOCP, &transfer, &compKey, &lpOver, INFINITE)) {
         EOverlapped* pO = CONTAINING_RECORD(lpOver, EOverlapped, m_overlapped);
-        if (transfer > 0 && compKey != 0)
+        if ( compKey != 0)
         {
             EOverlapped* pO = CONTAINING_RECORD(lpOver, EOverlapped, m_overlapped);
+            LOGI("pO->m_operator = %d", pO->m_operator);
+            pO->m_server = this;
             switch (pO->m_operator)
             {
             case EAccept:
